@@ -1,0 +1,377 @@
+// breathwithmagic - Prisma Schema
+// Database: PostgreSQL on Neon
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// =============================================================================
+// ENUMS
+// =============================================================================
+
+enum UserRole {
+  user
+  creator
+}
+
+enum CreatorCategory {
+  Breathwork
+  Yoga
+  Meditation
+  Mindfulness
+  Somatic
+  SoundHealing
+  Movement
+  Coaching
+  Sleep
+  StressRelief
+}
+
+enum SubscriptionPriceTier {
+  TIER_500   // $5/month
+  TIER_1000  // $10/month
+  TIER_2000  // $20/month
+  TIER_3000  // $30/month
+}
+
+enum CreatorStatus {
+  pending_setup
+  active
+  suspended
+  deactivated
+}
+
+enum ContentType {
+  video
+  audio
+  text
+}
+
+enum ContentStatus {
+  draft
+  published
+  archived
+  deleted
+}
+
+enum SubscriptionStatus {
+  active
+  canceled
+  past_due
+  trialing
+}
+
+enum NotificationType {
+  new_content
+  new_message
+  subscription_renewed
+  trial_ending
+  payment_failed
+}
+
+enum OnboardingStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  SKIPPED
+  COMPLETED
+}
+
+// =============================================================================
+// USERS
+// =============================================================================
+
+model User {
+  id                String    @id @default(cuid())
+  clerkId           String    @unique
+  email             String    @unique
+  name              String?
+  avatarUrl         String?
+  stripeCustomerId  String?
+  role              UserRole  @default(user)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  // Relations
+  creatorProfile    CreatorProfile?
+  subscriptions     Subscription[]    @relation("UserSubscriptions")
+  follows           Follow[]          @relation("UserFollows")
+  sentMessages      Message[]         @relation("SentMessages")
+  receivedMessages  Message[]         @relation("ReceivedMessages")
+  notifications     Notification[]
+  contentViews      ContentView[]
+  onboarding        UserOnboarding?
+
+  @@index([clerkId])
+  @@index([stripeCustomerId])
+}
+
+// =============================================================================
+// CREATOR PROFILES
+// =============================================================================
+
+model CreatorProfile {
+  id                        String               @id @default(cuid())
+  userId                    String               @unique
+  user                      User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Profile info
+  handle                    String               @unique @db.VarChar(30)
+  displayName               String
+  bio                       String?
+  avatarUrl                 String?
+  coverImageUrl             String?
+  category                  CreatorCategory
+
+  // Subscription settings
+  subscriptionPrice         SubscriptionPriceTier @default(TIER_1000)
+  trialEnabled              Boolean              @default(true)
+  dmEnabled                 Boolean              @default(true)
+
+  // Stripe Connect
+  stripeAccountId           String?
+  stripeOnboardingComplete  Boolean              @default(false)
+
+  // Status
+  status                    CreatorStatus        @default(pending_setup)
+  isVerified                Boolean              @default(false)
+  isFeatured                Boolean              @default(false)
+
+  createdAt                 DateTime             @default(now())
+  updatedAt                 DateTime             @updatedAt
+
+  // Relations
+  programs                  Program[]
+  content                   Content[]
+  subscriptions             Subscription[]       @relation("CreatorSubscriptions")
+  followers                 Follow[]             @relation("CreatorFollowers")
+
+  @@index([handle])
+  @@index([category, status])
+  @@index([isFeatured])
+  @@index([userId])
+}
+
+// =============================================================================
+// PROGRAMS (Series/Collections)
+// =============================================================================
+
+model Program {
+  id            String          @id @default(cuid())
+  creatorId     String
+  creator       CreatorProfile  @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+
+  title         String
+  description   String?
+  thumbnailUrl  String?
+  isFree        Boolean         @default(false)
+  sortOrder     Int             @default(0)
+  publishedAt   DateTime?
+
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  // Relations
+  content       Content[]
+
+  @@index([creatorId, publishedAt])
+}
+
+// =============================================================================
+// CONTENT
+// =============================================================================
+
+model Content {
+  id            String          @id @default(cuid())
+  creatorId     String
+  creator       CreatorProfile  @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  programId     String?
+  program       Program?        @relation(fields: [programId], references: [id], onDelete: SetNull)
+
+  type          ContentType
+  title         String
+  description   String?
+  mediaUrl      String?
+  thumbnailUrl  String?
+  duration      Int?            // seconds, for video/audio
+
+  isFree        Boolean         @default(false)
+  status        ContentStatus   @default(draft)
+  sortOrder     Int?            // within program
+
+  publishedAt   DateTime?
+  deletedAt     DateTime?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  // Relations
+  views         ContentView[]
+
+  @@index([creatorId, status, publishedAt])
+  @@index([programId, sortOrder])
+  @@index([type, publishedAt])
+}
+
+// =============================================================================
+// SUBSCRIPTIONS
+// =============================================================================
+
+model Subscription {
+  id                   String             @id @default(cuid())
+  userId               String
+  user                 User               @relation("UserSubscriptions", fields: [userId], references: [id], onDelete: Cascade)
+  creatorId            String
+  creator              CreatorProfile     @relation("CreatorSubscriptions", fields: [creatorId], references: [id], onDelete: Cascade)
+
+  stripeSubscriptionId String?   @unique
+  status               SubscriptionStatus @default(active)
+  priceAtPurchase      Int                // cents, for grandfathered pricing
+
+  currentPeriodStart   DateTime?
+  currentPeriodEnd     DateTime?
+  cancelAtPeriodEnd    Boolean            @default(false)
+
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  @@unique([userId, creatorId])
+  @@index([userId, status])
+  @@index([creatorId, status])
+  @@index([status, currentPeriodEnd])
+}
+
+// =============================================================================
+// FOLLOWS (Free Following)
+// =============================================================================
+
+model Follow {
+  id        String          @id @default(cuid())
+  userId    String
+  user      User            @relation("UserFollows", fields: [userId], references: [id], onDelete: Cascade)
+  creatorId String
+  creator   CreatorProfile  @relation("CreatorFollowers", fields: [creatorId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime        @default(now())
+
+  @@unique([userId, creatorId])
+  @@index([userId])
+  @@index([creatorId])
+}
+
+// =============================================================================
+// MESSAGES
+// =============================================================================
+
+model Message {
+  id          String   @id @default(cuid())
+  senderId    String
+  sender      User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  receiverId  String
+  receiver    User     @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  content     String
+  isRead      Boolean  @default(false)
+  isBroadcast Boolean  @default(false)
+
+  createdAt   DateTime @default(now())
+
+  @@index([receiverId, isRead, createdAt])
+  @@index([senderId, createdAt])
+}
+
+// =============================================================================
+// NOTIFICATIONS
+// =============================================================================
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type      NotificationType
+  title     String
+  body      String
+  link      String?
+  isRead    Boolean          @default(false)
+
+  createdAt DateTime         @default(now())
+
+  @@index([userId, isRead, createdAt])
+}
+
+// =============================================================================
+// CONTENT VIEWS (Analytics)
+// =============================================================================
+
+model ContentView {
+  id            String    @id @default(cuid())
+  contentId     String
+  content       Content   @relation(fields: [contentId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  watchDuration Int?      // seconds
+  completedAt   DateTime?
+
+  createdAt     DateTime  @default(now())
+
+  @@index([contentId, createdAt])
+  @@index([userId, createdAt])
+}
+
+// =============================================================================
+// PROCESSED WEBHOOK EVENTS (Idempotency)
+// =============================================================================
+
+model ProcessedWebhookEvent {
+  id          String   @id @default(cuid())
+  eventId     String   @unique
+  eventType   String
+  processedAt DateTime @default(now())
+}
+
+// =============================================================================
+// USER ONBOARDING (Subscriber Personalization)
+// =============================================================================
+
+model UserOnboarding {
+  id                         String           @id @default(cuid())
+  userId                     String           @unique
+  user                       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Quiz status
+  status                     OnboardingStatus @default(NOT_STARTED)
+  currentStep                Int              @default(0)
+  startedAt                  DateTime?
+  completedAt                DateTime?
+
+  // Quiz responses (all nullable for skip scenarios)
+  // primaryGoal values: stress_relief, better_sleep, anxiety, spiritual_growth, physical_wellness, prefer_not_to_say
+  primaryGoal                String?
+  // experienceLevel values: beginner, occasional, regular, advanced
+  experienceLevel            String?
+  // preferredTime values: morning, afternoon, evening, varies
+  preferredTime              String?
+  // timeCommitment values: 5min, 10min, 20min, 30plus
+  timeCommitment             String?
+  // interestedModalities: breathwork, meditation, yoga, sound_healing, movement
+  interestedModalities       String[]
+
+  // Consent tracking (REQUIRED for GDPR - health data under Article 9)
+  consentGiven               Boolean          @default(false)
+  consentVersion             String?          // e.g., "privacy-v1.2"
+  consentTimestamp           DateTime?
+
+  // Recommendations cache
+  recommendedCreatorIds      String[]
+  recommendationsGeneratedAt DateTime?
+
+  createdAt                  DateTime         @default(now())
+  updatedAt                  DateTime         @updatedAt
+
+  @@index([userId])
+  @@index([status])
+}
