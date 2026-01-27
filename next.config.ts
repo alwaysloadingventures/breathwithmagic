@@ -11,7 +11,26 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "images.unsplash.com",
       },
-      // Cloudflare R2 and Stream domains will be added in Phase 2
+      {
+        protocol: "https",
+        hostname: "*.r2.dev", // Cloudflare R2 public buckets
+      },
+      {
+        protocol: "https",
+        hostname: "*.r2.cloudflarestorage.com", // R2 custom domains
+      },
+      {
+        protocol: "https",
+        hostname: "imagedelivery.net", // Cloudflare Images
+      },
+      {
+        protocol: "https",
+        hostname: "*.cloudflarestream.com", // Stream thumbnails
+      },
+      {
+        protocol: "https",
+        hostname: "img.clerk.com", // Clerk user avatars
+      },
     ],
   },
 
@@ -31,6 +50,19 @@ const nextConfig: NextConfig = {
           {
             key: "Permissions-Policy",
             value: "camera=(), microphone=(), geolocation=()",
+          },
+          {
+            key: "Content-Security-Policy",
+            value: [
+              "default-src 'self'",
+              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.clerk.accounts.dev https://clerk.breathwithmagic.com",
+              "style-src 'self' 'unsafe-inline'",
+              "img-src 'self' data: blob: https:",
+              "font-src 'self' data:",
+              "connect-src 'self' https://*.clerk.accounts.dev https://clerk.breathwithmagic.com https://api.stripe.com",
+              "frame-src 'self' https://*.clerk.accounts.dev https://clerk.breathwithmagic.com https://js.stripe.com",
+              "worker-src 'self' blob:",
+            ].join("; "),
           },
         ],
       },
