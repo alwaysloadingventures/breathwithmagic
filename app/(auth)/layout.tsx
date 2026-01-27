@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function AuthLayout({
   children,
 }: {
@@ -38,19 +40,19 @@ export default function AuthLayout({
       <footer className="mt-8 text-center text-sm text-muted-foreground">
         <p>
           By continuing, you agree to our{" "}
-          <a
+          <Link
             href="/terms"
             className="text-primary hover:underline inline-block py-2 px-1"
           >
             Terms of Service
-          </a>{" "}
+          </Link>{" "}
           and{" "}
-          <a
+          <Link
             href="/privacy"
             className="text-primary hover:underline inline-block py-2 px-1"
           >
             Privacy Policy
-          </a>
+          </Link>
         </p>
       </footer>
     </div>

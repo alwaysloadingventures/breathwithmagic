@@ -190,6 +190,7 @@ async function handleAccountDeauthorized(accountId: string): Promise<void> {
 /**
  * Helper to extract period dates from a Stripe subscription.
  * In Stripe API 2024+ (SDK v20+), period dates are on subscription ITEMS, not the subscription itself.
+ * Falls back to subscription-level fields for older API versions.
  */
 function getSubscriptionPeriodDates(subscription: Stripe.Subscription): {
   currentPeriodStart: Date | null;
@@ -204,8 +205,23 @@ function getSubscriptionPeriodDates(subscription: Stripe.Subscription): {
     };
   }
 
-  // If we can't find period dates, return nulls (shouldn't happen in practice)
-  console.warn(
+  // Fallback to subscription-level fields (older Stripe API versions)
+  // These fields may exist on subscriptions from older API versions or in certain edge cases
+  // @ts-expect-error - These fields may exist on older API versions
+  if (subscription.current_period_start && subscription.current_period_end) {
+    console.warn(
+      `Period dates extracted from subscription level (not items) for ${subscription.id}`,
+    );
+    return {
+      // @ts-expect-error - Field may exist on older API versions
+      currentPeriodStart: new Date(subscription.current_period_start * 1000),
+      // @ts-expect-error - Field may exist on older API versions
+      currentPeriodEnd: new Date(subscription.current_period_end * 1000),
+    };
+  }
+
+  // If we can't find period dates anywhere, log error and return nulls
+  console.error(
     `Could not extract period dates from subscription ${subscription.id}`,
   );
   return {
@@ -275,6 +291,9 @@ async function handleCheckoutSessionCompleted(
 
   // Create or update subscription record
   // Use upsert to handle race conditions with subscription.created event
+  // IMPORTANT: The update clause only sets stripeSubscriptionId to avoid
+  // overwriting status/dates that may have been updated by subscription.updated
+  // events that arrived before this event (out-of-order delivery)
   await prisma.subscription.upsert({
     where: {
       userId_creatorId: {
@@ -293,12 +312,9 @@ async function handleCheckoutSessionCompleted(
       cancelAtPeriodEnd: stripeSubscription.cancel_at_period_end,
     },
     update: {
+      // Only ensure subscription ID is set - don't overwrite status/dates
+      // Let customer.subscription.updated handle all status changes
       stripeSubscriptionId,
-      status,
-      priceAtPurchase,
-      currentPeriodStart,
-      currentPeriodEnd,
-      cancelAtPeriodEnd: stripeSubscription.cancel_at_period_end,
     },
   });
 
@@ -374,6 +390,9 @@ async function handleSubscriptionCreated(
 
 /**
  * Map Stripe subscription status to our SubscriptionStatus enum
+ *
+ * IMPORTANT: This function should NEVER default to "active" for unknown statuses
+ * as that could grant unauthorized access. Unknown statuses throw an error.
  */
 function mapStripeStatus(stripeStatus: string): SubscriptionStatus {
   switch (stripeStatus) {
@@ -385,11 +404,19 @@ function mapStripeStatus(stripeStatus: string): SubscriptionStatus {
     case "unpaid":
       return "past_due";
     case "canceled":
-    case "incomplete":
     case "incomplete_expired":
       return "canceled";
+    case "incomplete":
+      // Payment pending (e.g., 3D Secure) - deny access but allow completion
+      console.warn(`Subscription status incomplete - payment pending`);
+      return "past_due";
+    case "paused":
+      // Stripe subscription paused - treat as past_due (no access)
+      return "past_due";
     default:
-      return "active";
+      // NEVER default to "active" - throw error instead to avoid granting access
+      console.error(`Unknown Stripe subscription status: ${stripeStatus}`);
+      throw new Error(`Unsupported subscription status: ${stripeStatus}`);
   }
 }
 
@@ -537,6 +564,7 @@ async function handleTrialWillEnd(
 /**
  * Helper to extract subscription ID from an invoice.
  * In Stripe SDK v20+, subscription is at invoice.parent?.subscription_details?.subscription
+ * Falls back to direct subscription field for older API versions.
  */
 function getInvoiceSubscriptionId(invoice: Stripe.Invoice): string | null {
   // In Stripe SDK v20+, subscription is in parent.subscription_details
@@ -547,6 +575,15 @@ function getInvoiceSubscriptionId(invoice: Stripe.Invoice): string | null {
     return typeof sub === "string" ? sub : sub.id;
   }
 
+  // Fallback to direct subscription field (older API versions)
+  // @ts-expect-error - This field may exist on older API versions
+  if (invoice.subscription) {
+    // @ts-expect-error - Field may exist on older API versions
+    const sub = invoice.subscription;
+    return typeof sub === "string" ? sub : sub.id;
+  }
+
+  console.error(`Could not extract subscription ID from invoice ${invoice.id}`);
   return null;
 }
 
@@ -642,7 +679,81 @@ async function handleInvoicePaid(invoice: Stripe.Invoice): Promise<void> {
     //     link: '/subscriptions',
     //   },
     // });
+  } else if (dbSubscription.status === "trialing") {
+    // Handle transition from trialing to active when first invoice after trial is paid
+    await prisma.subscription.update({
+      where: { id: dbSubscription.id },
+      data: { status: "active" },
+    });
+    console.log(
+      `Subscription ${dbSubscription.id} transitioned from trialing to active (user ${dbSubscription.userId})`,
+    );
+
+    // TODO (Phase 5): Create notification for user
+    // await prisma.notification.create({
+    //   data: {
+    //     userId: dbSubscription.userId,
+    //     type: 'trial_converted',
+    //     title: 'Welcome as a subscriber',
+    //     body: 'Your trial has ended and your subscription is now active.',
+    //     link: '/subscriptions',
+    //   },
+    // });
   }
+}
+
+/**
+ * Handle invoice.upcoming event
+ * Sends reminder notification before billing (Phase 5)
+ */
+async function handleInvoiceUpcoming(invoice: Stripe.Invoice): Promise<void> {
+  const subscriptionId = getInvoiceSubscriptionId(invoice);
+
+  if (!subscriptionId) {
+    console.log(
+      `Ignoring invoice.upcoming without subscription: ${invoice.id}`,
+    );
+    return;
+  }
+
+  const dbSubscription = await prisma.subscription.findUnique({
+    where: { stripeSubscriptionId: subscriptionId },
+    select: {
+      id: true,
+      userId: true,
+      creatorId: true,
+      creator: {
+        select: { displayName: true },
+      },
+    },
+  });
+
+  if (!dbSubscription) {
+    console.log(
+      `invoice.upcoming: Subscription not found in DB: ${subscriptionId}`,
+    );
+    return;
+  }
+
+  // Get billing date from invoice
+  const billingDate = invoice.next_payment_attempt
+    ? new Date(invoice.next_payment_attempt * 1000).toLocaleDateString()
+    : "soon";
+
+  console.log(
+    `Invoice upcoming: ${subscriptionId} (user ${dbSubscription.userId}, billing ${billingDate})`,
+  );
+
+  // TODO (Phase 5): Create notification for user
+  // await prisma.notification.create({
+  //   data: {
+  //     userId: dbSubscription.userId,
+  //     type: 'subscription_renewed',
+  //     title: 'Upcoming payment',
+  //     body: `Your subscription to ${dbSubscription.creator.displayName} will renew on ${billingDate}.`,
+  //     link: '/subscriptions',
+  //   },
+  // });
 }
 
 export async function POST(request: NextRequest) {
@@ -756,6 +867,12 @@ export async function POST(request: NextRequest) {
       case "invoice.paid": {
         const invoice = event.data.object as Stripe.Invoice;
         await handleInvoicePaid(invoice);
+        break;
+      }
+
+      case "invoice.upcoming": {
+        const invoice = event.data.object as Stripe.Invoice;
+        await handleInvoiceUpcoming(invoice);
         break;
       }
 

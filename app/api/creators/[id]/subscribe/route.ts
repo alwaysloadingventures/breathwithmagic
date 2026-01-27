@@ -22,6 +22,7 @@ import { auth } from "@clerk/nextjs/server";
 import Stripe from "stripe";
 import { prisma } from "@/lib/prisma";
 import {
+  stripe,
   getBaseUrl,
   getOrCreateCustomer,
   getOrCreatePrice,
@@ -132,6 +133,35 @@ export async function POST(
       );
     }
 
+    // Real-time validation of Stripe account capabilities
+    // This catches cases where the account was disabled after onboarding
+    try {
+      const account = await stripe.accounts.retrieve(creator.stripeAccountId);
+
+      if (!account.charges_enabled) {
+        console.error(
+          `Creator ${creator.id} account ${creator.stripeAccountId} cannot accept charges`,
+        );
+        return NextResponse.json(
+          {
+            error:
+              "This creator is currently unable to accept new subscriptions. Please try again later.",
+            code: "CREATOR_ACCOUNT_RESTRICTED",
+          },
+          { status: 400 },
+        );
+      }
+    } catch (stripeError) {
+      console.error(`Failed to verify creator Stripe account:`, stripeError);
+      return NextResponse.json(
+        {
+          error: "Unable to verify creator payment account. Please try again.",
+          code: "ACCOUNT_VERIFICATION_FAILED",
+        },
+        { status: 502 },
+      );
+    }
+
     if (creator.status !== "active") {
       return NextResponse.json(
         {
@@ -198,11 +228,9 @@ export async function POST(
       });
     }
 
-    // Get or create price for this tier on the connected account
-    const priceId = await getOrCreatePrice(
-      creator.subscriptionPrice,
-      creator.stripeAccountId,
-    );
+    // Get or create price for this tier on the platform account
+    // Note: Prices are created on the platform, funds are routed via transfer_data
+    const priceId = await getOrCreatePrice(creator.subscriptionPrice);
 
     // Build URLs for success/cancel
     const baseUrl = getBaseUrl();

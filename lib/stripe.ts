@@ -170,25 +170,22 @@ export const PRICE_TIER_TO_CENTS: Record<string, number> = {
 
 /**
  * Cache for Stripe Price IDs to avoid repeated lookups
- * Key: `${tier}_${stripeAccountId}` or `${tier}_platform` for platform prices
+ * Key: `${tier}_platform` for platform prices (destination charges)
  */
 const priceIdCache = new Map<string, string>();
 
 /**
- * Get or create a Stripe Price for a subscription tier
+ * Get or create a Stripe Price for a subscription tier on the PLATFORM account
  *
- * Creates prices on the connected account so the funds go directly to the creator.
- * The platform fee is applied via application_fee_percent during checkout.
+ * IMPORTANT: For destination charges, prices must be created on the platform account,
+ * NOT on connected accounts. The transfer_data.destination in the subscription
+ * routes the funds (minus application_fee_percent) to the creator's connected account.
  *
  * @param tier - Subscription price tier (TIER_500, TIER_1000, etc.)
- * @param stripeAccountId - Creator's connected Stripe account ID
- * @returns Stripe Price ID
+ * @returns Stripe Price ID on the platform account
  */
-export async function getOrCreatePrice(
-  tier: string,
-  stripeAccountId: string,
-): Promise<string> {
-  const cacheKey = `${tier}_${stripeAccountId}`;
+export async function getOrCreatePrice(tier: string): Promise<string> {
+  const cacheKey = `${tier}_platform`;
 
   // Check cache first
   if (priceIdCache.has(cacheKey)) {
@@ -200,18 +197,13 @@ export async function getOrCreatePrice(
     throw new Error(`Invalid price tier: ${tier}`);
   }
 
-  // Search for existing price on the connected account
-  const existingPrices = await stripe.prices.list(
-    {
-      active: true,
-      type: "recurring",
-      limit: 100,
-      expand: ["data.product"],
-    },
-    {
-      stripeAccount: stripeAccountId,
-    },
-  );
+  // Search for existing price on the platform account
+  const existingPrices = await stripe.prices.list({
+    active: true,
+    type: "recurring",
+    limit: 100,
+    expand: ["data.product"],
+  });
 
   // Look for a matching price
   const matchingPrice = existingPrices.data.find(
@@ -228,39 +220,29 @@ export async function getOrCreatePrice(
     return matchingPrice.id;
   }
 
-  // Create product first on the connected account
-  const product = await stripe.products.create(
-    {
-      name: `breathwithmagic Subscription - ${tier.replace("TIER_", "$").replace("00", "")}`,
-      description: `Monthly subscription to creator content`,
-      metadata: {
-        breathwithmagic: "true",
-        tier,
-      },
+  // Create product first on the platform account
+  const product = await stripe.products.create({
+    name: `breathwithmagic Subscription - ${tier.replace("TIER_", "$").replace("00", "")}`,
+    description: `Monthly subscription to creator content`,
+    metadata: {
+      breathwithmagic: "true",
+      tier,
     },
-    {
-      stripeAccount: stripeAccountId,
-    },
-  );
+  });
 
-  // Create price on the connected account
-  const price = await stripe.prices.create(
-    {
-      product: product.id,
-      unit_amount: amountInCents,
-      currency: "usd",
-      recurring: {
-        interval: "month",
-      },
-      metadata: {
-        breathwithmagic: "true",
-        tier,
-      },
+  // Create price on the platform account
+  const price = await stripe.prices.create({
+    product: product.id,
+    unit_amount: amountInCents,
+    currency: "usd",
+    recurring: {
+      interval: "month",
     },
-    {
-      stripeAccount: stripeAccountId,
+    metadata: {
+      breathwithmagic: "true",
+      tier,
     },
-  );
+  });
 
   priceIdCache.set(cacheKey, price.id);
   return price.id;
@@ -318,6 +300,9 @@ export async function getOrCreateCustomer(
  *
  * Uses destination charges so the creator receives the payment
  * minus the platform fee (application_fee_percent).
+ *
+ * IMPORTANT: For destination charges, prices must be created on the PLATFORM account,
+ * not the connected account. The transfer_data.destination routes funds to the creator.
  *
  * @param options - Checkout session options
  * @returns Stripe Checkout Session
@@ -399,6 +384,22 @@ export async function cancelSubscriptionAtPeriodEnd(
 ): Promise<Stripe.Subscription> {
   const subscription = await stripe.subscriptions.update(subscriptionId, {
     cancel_at_period_end: true,
+  });
+
+  return subscription;
+}
+
+/**
+ * Reactivate a subscription that was set to cancel at period end
+ *
+ * @param subscriptionId - Stripe Subscription ID
+ * @returns Updated Stripe Subscription
+ */
+export async function reactivateSubscription(
+  subscriptionId: string,
+): Promise<Stripe.Subscription> {
+  const subscription = await stripe.subscriptions.update(subscriptionId, {
+    cancel_at_period_end: false,
   });
 
   return subscription;
