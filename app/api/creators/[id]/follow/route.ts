@@ -6,12 +6,90 @@ import { prisma } from "@/lib/prisma";
 /**
  * Follow API Routes
  *
+ * GET /api/creators/[id]/follow - Check if current user follows this creator
  * POST /api/creators/[id]/follow - Follow a creator
  * DELETE /api/creators/[id]/follow - Unfollow a creator
  *
  * Requires authentication.
  */
 
+/**
+ * GET - Check if current user follows this creator
+ */
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    const { userId } = await auth();
+
+    if (!userId) {
+      return NextResponse.json(
+        {
+          error: "Please sign in to check follow status",
+          code: "UNAUTHORIZED",
+        },
+        { status: 401 },
+      );
+    }
+
+    const { id } = await params;
+
+    // Find the user in database
+    const user = await prisma.user.findUnique({
+      where: { clerkId: userId },
+      select: { id: true },
+    });
+
+    if (!user) {
+      return NextResponse.json(
+        { error: "User not found", code: "USER_NOT_FOUND" },
+        { status: 404 },
+      );
+    }
+
+    // Find the creator
+    const creator = await prisma.creatorProfile.findFirst({
+      where: {
+        OR: [{ id }, { handle: id }],
+        status: "active",
+      },
+      select: { id: true },
+    });
+
+    if (!creator) {
+      return NextResponse.json(
+        { error: "Creator not found", code: "CREATOR_NOT_FOUND" },
+        { status: 404 },
+      );
+    }
+
+    // Check if following
+    const follow = await prisma.follow.findUnique({
+      where: {
+        userId_creatorId: {
+          userId: user.id,
+          creatorId: creator.id,
+        },
+      },
+    });
+
+    return NextResponse.json({
+      isFollowing: !!follow,
+      followedAt: follow?.createdAt?.toISOString() || null,
+    });
+  } catch (error) {
+    console.error("Check follow status error:", error);
+    return NextResponse.json(
+      { error: "An error occurred. Please try again.", code: "CHECK_ERROR" },
+      { status: 500 },
+    );
+  }
+}
+
+/**
+ * POST - Follow a creator
+ */
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> },
@@ -47,13 +125,21 @@ export async function POST(
         OR: [{ id }, { handle: id }],
         status: "active",
       },
-      select: { id: true, displayName: true },
+      select: { id: true, userId: true, displayName: true },
     });
 
     if (!creator) {
       return NextResponse.json(
         { error: "Creator not found", code: "CREATOR_NOT_FOUND" },
         { status: 404 },
+      );
+    }
+
+    // Prevent following yourself
+    if (creator.userId === user.id) {
+      return NextResponse.json(
+        { error: "You cannot follow yourself", code: "CANNOT_FOLLOW_SELF" },
+        { status: 400 },
       );
     }
 

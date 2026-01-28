@@ -10,12 +10,12 @@ import { prisma } from "@/lib/prisma";
 import { cn, formatCount } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { buttonVariants } from "@/components/ui/button";
-import {
-  ContentPreviewCard,
-  ContentPreviewCardSkeleton,
-} from "@/components/browse";
+import { buttonVariants } from "@/lib/button-variants";
 import { CreatorProfileActions } from "./creator-profile-actions";
+import {
+  CreatorContentFeed,
+  CreatorContentFeedSkeleton,
+} from "./creator-content-feed";
 
 /**
  * Creator Profile Page - Public profile for a creator
@@ -367,8 +367,8 @@ export default async function CreatorProfilePage({
           <h2 className="text-xl font-semibold text-foreground mb-6">
             Content
           </h2>
-          <Suspense fallback={<ContentGridSkeleton />}>
-            <ContentGrid
+          <Suspense fallback={<CreatorContentFeedSkeleton />}>
+            <ContentGridWithPagination
               creatorId={creator.id}
               creatorHandle={creator.handle}
               hasAccess={isSubscribed}
@@ -381,9 +381,9 @@ export default async function CreatorProfilePage({
 }
 
 /**
- * Content Grid - Shows creator's content
+ * Content Grid with Pagination - Server component wrapper
  */
-async function ContentGrid({
+async function ContentGridWithPagination({
   creatorId,
   creatorHandle,
   hasAccess,
@@ -392,7 +392,9 @@ async function ContentGrid({
   creatorHandle: string;
   hasAccess: boolean;
 }) {
-  // Fetch content - show more free content if not subscribed
+  const INITIAL_LIMIT = 12;
+
+  // Fetch initial content
   const content = await prisma.content.findMany({
     where: {
       creatorId,
@@ -408,62 +410,31 @@ async function ContentGrid({
       isFree: true,
       publishedAt: true,
     },
-    orderBy: [{ isFree: "desc" }, { publishedAt: "desc" }],
-    take: 12,
+    orderBy: [{ publishedAt: "desc" }],
+    take: INITIAL_LIMIT + 1,
   });
 
-  if (content.length === 0) {
-    return (
-      <div className="text-center py-12 text-muted-foreground">
-        <p>No content yet. Check back soon!</p>
-      </div>
-    );
-  }
+  // Get total count
+  const totalCount = await prisma.content.count({
+    where: {
+      creatorId,
+      status: "published",
+    },
+  });
 
-  // Get counts
-  const freeCount = content.filter((c) => c.isFree).length;
-  const paidCount = content.length - freeCount;
+  // Determine if there are more results
+  const hasMore = content.length > INITIAL_LIMIT;
+  const items = hasMore ? content.slice(0, INITIAL_LIMIT) : content;
+  const nextCursor = hasMore ? items[items.length - 1].id : null;
 
   return (
-    <>
-      {/* Content count summary */}
-      {!hasAccess && paidCount > 0 && (
-        <p className="text-sm text-muted-foreground mb-4">
-          Showing {freeCount} free post{freeCount !== 1 ? "s" : ""} and{" "}
-          {paidCount} exclusive post{paidCount !== 1 ? "s" : ""}
-        </p>
-      )}
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {content.map((item) => (
-          <ContentPreviewCard
-            key={item.id}
-            id={item.id}
-            creatorHandle={creatorHandle}
-            title={item.title}
-            description={item.description}
-            thumbnailUrl={item.thumbnailUrl}
-            type={item.type}
-            duration={item.duration}
-            isFree={item.isFree}
-            hasAccess={hasAccess}
-            publishedAt={item.publishedAt}
-          />
-        ))}
-      </div>
-    </>
-  );
-}
-
-/**
- * Content Grid Skeleton
- */
-function ContentGridSkeleton() {
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-      {Array.from({ length: 6 }).map((_, i) => (
-        <ContentPreviewCardSkeleton key={i} />
-      ))}
-    </div>
+    <CreatorContentFeed
+      creatorId={creatorId}
+      creatorHandle={creatorHandle}
+      hasAccess={hasAccess}
+      initialContent={items}
+      initialCursor={nextCursor}
+      totalCount={totalCount}
+    />
   );
 }

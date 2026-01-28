@@ -5,12 +5,6 @@ import { useRouter } from "next/navigation";
 import { Heart, Check, Loader2, UserMinus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 interface CreatorProfileActionsProps {
@@ -92,93 +86,73 @@ export function CreatorProfileActions({
   }, [isAuthenticated, creatorId, creatorHandle, router]);
 
   return (
-    <TooltipProvider>
-      <div className="flex items-center gap-3">
-        {/* Follow Button - Only show if not subscribed (subscribers are implicitly following) */}
-        {!initialIsSubscribed && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                onClick={handleFollowToggle}
-                disabled={isFollowLoading || isPending}
-                onMouseEnter={() => setIsHoveringFollow(true)}
-                onMouseLeave={() => setIsHoveringFollow(false)}
-                className={cn(
-                  "min-h-[44px] min-w-[110px] transition-all duration-150",
-                  isFollowing
-                    ? "border-primary/50 text-primary hover:border-destructive hover:text-destructive hover:bg-destructive/5"
-                    : "border-border hover:border-primary/50 hover:text-primary",
-                )}
-                aria-label={isFollowing ? "Unfollow" : "Follow"}
-              >
-                {isFollowLoading ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : isFollowing && isHoveringFollow ? (
-                  <>
-                    <UserMinus className="size-4 mr-1.5" />
-                    Unfollow
-                  </>
-                ) : isFollowing ? (
-                  <>
-                    <Check className="size-4 mr-1.5" />
-                    Following
-                  </>
-                ) : (
-                  <>
-                    <Heart className="size-4 mr-1.5" />
-                    Follow
-                  </>
-                )}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom" className="max-w-[200px] text-center">
-              <p className="text-xs">
-                {isFollowing
-                  ? "Click to unfollow"
-                  : "Follow to see free content in your feed"}
-              </p>
-            </TooltipContent>
-          </Tooltip>
-        )}
+    <div className="flex items-center gap-3">
+      {/* Follow Button - Only show if not subscribed (subscribers are implicitly following) */}
+      {!initialIsSubscribed && (
+        <Button
+          variant="outline"
+          onClick={handleFollowToggle}
+          disabled={isFollowLoading || isPending}
+          onMouseEnter={() => setIsHoveringFollow(true)}
+          onMouseLeave={() => setIsHoveringFollow(false)}
+          className={cn(
+            "min-h-[44px] min-w-[110px] transition-all duration-150",
+            isFollowing
+              ? "border-primary/50 text-primary hover:border-destructive hover:text-destructive hover:bg-destructive/5"
+              : "border-border hover:border-primary/50 hover:text-primary",
+          )}
+          aria-label={isFollowing ? "Unfollow" : "Follow"}
+          title={
+            isFollowing
+              ? "Click to unfollow"
+              : "Follow to see free content in your feed"
+          }
+        >
+          {isFollowLoading ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : isFollowing && isHoveringFollow ? (
+            <>
+              <UserMinus className="size-4 mr-1.5" />
+              Unfollow
+            </>
+          ) : isFollowing ? (
+            <>
+              <Check className="size-4 mr-1.5" />
+              Following
+            </>
+          ) : (
+            <>
+              <Heart className="size-4 mr-1.5" />
+              Follow
+            </>
+          )}
+        </Button>
+      )}
 
-        {/* Subscribe Button */}
-        {!initialIsSubscribed && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                onClick={handleSubscribe}
-                className="min-h-[44px] min-w-[140px]"
-                disabled={isPending}
-              >
-                {trialEnabled ? "Start free trial" : `Subscribe ${price}/mo`}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom" className="max-w-[220px] text-center">
-              <p className="text-xs">Subscribe to unlock all exclusive content</p>
-            </TooltipContent>
-          </Tooltip>
-        )}
+      {/* Subscribe Button */}
+      {!initialIsSubscribed && (
+        <Button
+          onClick={handleSubscribe}
+          className="min-h-[44px] min-w-[140px]"
+          disabled={isPending}
+          title="Subscribe to unlock all exclusive content"
+        >
+          {trialEnabled ? "Start free trial" : `Subscribe ${price}/mo`}
+        </Button>
+      )}
 
-        {/* Subscribed Badge */}
-        {initialIsSubscribed && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="outline"
-                disabled
-                className="min-h-[44px] gap-2 border-primary/50 text-primary"
-              >
-                <Check className="size-4" />
-                Subscribed
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom">
-              <p className="text-xs">You have full access to all content</p>
-            </TooltipContent>
-          </Tooltip>
-        )}
-      </div>
-    </TooltipProvider>
+      {/* Subscribed Badge */}
+      {initialIsSubscribed && (
+        <Button
+          variant="outline"
+          disabled
+          className="min-h-[44px] gap-2 border-primary/50 text-primary"
+          title="You have full access to all content"
+        >
+          <Check className="size-4" />
+          Subscribed
+        </Button>
+      )}
+    </div>
   );
 }

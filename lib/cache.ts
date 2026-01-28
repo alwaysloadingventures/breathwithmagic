@@ -59,7 +59,7 @@ export async function getCache<T>(key: string): Promise<T | null> {
 export async function setCache<T>(
   key: string,
   value: T,
-  ttlSeconds: number
+  ttlSeconds: number,
 ): Promise<void> {
   if (!redis) return;
   try {
@@ -119,7 +119,7 @@ interface SubscriptionStatusCache {
  */
 export async function getCachedSubscriptionStatus(
   userId: string,
-  creatorId: string
+  creatorId: string,
 ): Promise<SubscriptionStatusCache | null> {
   const key = `sub:${userId}:${creatorId}`;
   return getCache<SubscriptionStatusCache>(key);
@@ -135,7 +135,7 @@ export async function getCachedSubscriptionStatus(
 export async function setCachedSubscriptionStatus(
   userId: string,
   creatorId: string,
-  data: SubscriptionStatusCache
+  data: SubscriptionStatusCache,
 ): Promise<void> {
   const key = `sub:${userId}:${creatorId}`;
   await setCache(key, data, CACHE_TTL.SUBSCRIPTION_STATUS);
@@ -150,7 +150,7 @@ export async function setCachedSubscriptionStatus(
  */
 export async function invalidateSubscriptionCache(
   userId: string,
-  creatorId: string
+  creatorId: string,
 ): Promise<void> {
   const key = `sub:${userId}:${creatorId}`;
   await deleteCache(key);
@@ -163,7 +163,7 @@ export async function invalidateSubscriptionCache(
  * @param creatorId - Creator profile ID
  */
 export async function invalidateCreatorSubscriptionCaches(
-  creatorId: string
+  creatorId: string,
 ): Promise<void> {
   await deleteCachePattern(`sub:*:${creatorId}`);
 }
@@ -179,7 +179,7 @@ export async function invalidateCreatorSubscriptionCaches(
  * @returns Cached profile or null if not cached
  */
 export async function getCachedCreatorProfile<T>(
-  creatorId: string
+  creatorId: string,
 ): Promise<T | null> {
   const key = `profile:${creatorId}`;
   return getCache<T>(key);
@@ -193,7 +193,7 @@ export async function getCachedCreatorProfile<T>(
  */
 export async function setCachedCreatorProfile<T>(
   creatorId: string,
-  profile: T
+  profile: T,
 ): Promise<void> {
   const key = `profile:${creatorId}`;
   await setCache(key, profile, CACHE_TTL.CREATOR_PROFILE);
@@ -208,7 +208,7 @@ export async function setCachedCreatorProfile<T>(
  */
 export async function invalidateCreatorProfileCache(
   creatorId: string,
-  handle?: string
+  handle?: string,
 ): Promise<void> {
   await deleteCache(`profile:${creatorId}`);
   if (handle) {
@@ -227,7 +227,7 @@ export async function invalidateCreatorProfileCache(
  * @returns Cached count or null if not cached
  */
 export async function getCachedNotificationCount(
-  userId: string
+  userId: string,
 ): Promise<number | null> {
   const key = `notifications:${userId}`;
   return getCache<number>(key);
@@ -241,7 +241,7 @@ export async function getCachedNotificationCount(
  */
 export async function setCachedNotificationCount(
   userId: string,
-  count: number
+  count: number,
 ): Promise<void> {
   const key = `notifications:${userId}`;
   await setCache(key, count, CACHE_TTL.NOTIFICATION_COUNT);
@@ -254,7 +254,7 @@ export async function setCachedNotificationCount(
  * @param userId - User ID
  */
 export async function invalidateNotificationCache(
-  userId: string
+  userId: string,
 ): Promise<void> {
   const key = `notifications:${userId}`;
   await deleteCache(key);

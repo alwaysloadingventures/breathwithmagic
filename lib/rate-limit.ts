@@ -47,7 +47,7 @@ export function createRateLimiter(config: RateLimitConfig) {
         }
       }
     },
-    5 * 60 * 1000
+    5 * 60 * 1000,
   );
 
   // Allow cleanup to be stopped if needed (useful for testing)

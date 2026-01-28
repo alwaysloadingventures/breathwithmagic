@@ -4,7 +4,7 @@ import { ArrowRight } from "lucide-react";
 
 import { prisma } from "@/lib/prisma";
 import { cn } from "@/lib/utils";
-import { buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/lib/button-variants";
 import {
   HeroSection,
   SocialProofBanner,

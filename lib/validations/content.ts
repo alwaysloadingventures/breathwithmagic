@@ -84,11 +84,13 @@ export const updateContentSchema = z.object({
  * Schema for publishing content
  * Ensures required fields are present before publishing
  */
-export const publishContentSchema = z.object({
-  title: z.string().min(1, "Title is required"),
-  // For video/audio, mediaUrl and duration are required
-  // For text, neither is required
-}).passthrough();
+export const publishContentSchema = z
+  .object({
+    title: z.string().min(1, "Title is required"),
+    // For video/audio, mediaUrl and duration are required
+    // For text, neither is required
+  })
+  .passthrough();
 
 /**
  * Content list query parameters
@@ -149,7 +151,9 @@ export const updateProgramSchema = z.object({
  * Schema for reordering content within a program
  */
 export const reorderProgramContentSchema = z.object({
-  contentIds: z.array(z.string().cuid()).min(1, "At least one content ID is required"),
+  contentIds: z
+    .array(z.string().cuid())
+    .min(1, "At least one content ID is required"),
 });
 
 /**
@@ -250,7 +254,7 @@ export const richTextContentSchema = z
       // Basic check that it's not just whitespace
       return val.trim().length > 0;
     },
-    { message: "Content cannot be empty" }
+    { message: "Content cannot be empty" },
   );
 
 // =============================================================================
@@ -293,7 +297,9 @@ export function canPublishContent(content: {
 
   if (content.type === "video" || content.type === "audio") {
     if (!content.mediaUrl) {
-      errors.push(`${content.type === "video" ? "Video" : "Audio"} file is required`);
+      errors.push(
+        `${content.type === "video" ? "Video" : "Audio"} file is required`,
+      );
     }
     if (!content.duration || content.duration <= 0) {
       errors.push("Duration is required for media content");
@@ -340,7 +346,7 @@ export function getContentTypeIcon(type: ContentType): string {
  * Get content status badge variant
  */
 export function getContentStatusVariant(
-  status: ContentStatus
+  status: ContentStatus,
 ): "default" | "secondary" | "outline" | "destructive" {
   switch (status) {
     case "published":
