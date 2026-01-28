@@ -76,8 +76,14 @@ export function PaywallOverlay({
         {/* Message */}
         <p className="text-foreground font-medium mb-1">Subscribe to unlock</p>
         <p className="text-muted-foreground text-sm mb-4">
-          {price}/month{" "}
-          <span className="text-muted-foreground/70"> Cancel anytime</span>
+          {trialEnabled ? `7 days free, then ${price}/month` : `${price}/month`}
+          {" "}
+          <Link
+            href="/subscriptions"
+            className="text-muted-foreground/70 hover:underline hover:text-muted-foreground transition-colors"
+          >
+            Cancel anytime
+          </Link>
         </p>
 
         {/* CTA Button */}
@@ -88,15 +94,8 @@ export function PaywallOverlay({
             "min-h-[44px] min-w-[160px]",
           )}
         >
-          {trialEnabled ? "Start free trial" : `Subscribe for ${price}/month`}
+          {trialEnabled ? "Start 7-day trial" : `Subscribe for ${price}/month`}
         </Link>
-
-        {/* Trial Note */}
-        {trialEnabled && (
-          <p className="text-xs text-muted-foreground mt-2">
-            7 days free, then {price}/month
-          </p>
-        )}
       </div>
     </div>
   );

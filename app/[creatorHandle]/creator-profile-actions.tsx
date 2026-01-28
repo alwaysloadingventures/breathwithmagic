@@ -36,6 +36,7 @@ export function CreatorProfileActions({
   const [isPending, startTransition] = useTransition();
   const [isFollowing, setIsFollowing] = useState(initialIsFollowing);
   const [isFollowLoading, setIsFollowLoading] = useState(false);
+  const [isSubscribing, setIsSubscribing] = useState(false);
   const [isHoveringFollow, setIsHoveringFollow] = useState(false);
 
   /**
@@ -81,7 +82,8 @@ export function CreatorProfileActions({
       return;
     }
 
-    // Navigate to subscribe endpoint
+    // Set loading state and navigate to subscribe endpoint
+    setIsSubscribing(true);
     router.push(`/api/creators/${creatorId}/subscribe`);
   }, [isAuthenticated, creatorId, creatorHandle, router]);
 
@@ -133,11 +135,22 @@ export function CreatorProfileActions({
       {!initialIsSubscribed && (
         <Button
           onClick={handleSubscribe}
-          className="min-h-[44px] min-w-[140px]"
-          disabled={isPending}
+          className="min-h-[44px] min-w-[160px] flex flex-col items-center justify-center leading-tight"
+          disabled={isPending || isSubscribing}
           title="Subscribe to unlock all exclusive content"
         >
-          {trialEnabled ? "Start free trial" : `Subscribe ${price}/mo`}
+          {isSubscribing ? (
+            <Loader2 className="size-4 animate-spin" />
+          ) : trialEnabled ? (
+            <>
+              <span>Start 7-day trial</span>
+              <span className="text-xs opacity-80 font-normal">
+                then {price}/month
+              </span>
+            </>
+          ) : (
+            `Subscribe ${price}/mo`
+          )}
         </Button>
       )}
 

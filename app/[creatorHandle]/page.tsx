@@ -11,6 +11,7 @@ import { cn, formatCount } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/lib/button-variants";
+import { SkipLink } from "@/components/ui/skip-link";
 import { CreatorProfileActions } from "./creator-profile-actions";
 import {
   CreatorContentFeed,
@@ -32,6 +33,7 @@ import {
 
 interface CreatorProfilePageProps {
   params: Promise<{ creatorHandle: string }>;
+  searchParams: Promise<{ subscribed?: string }>;
 }
 
 /**
@@ -101,10 +103,12 @@ export async function generateMetadata({
   };
 }
 
-export default async function CreatorProfilePage({
-  params,
-}: CreatorProfilePageProps) {
-  const { creatorHandle } = await params;
+export default async function CreatorProfilePage(
+  props: CreatorProfilePageProps
+) {
+  const { creatorHandle } = await props.params;
+  const searchParams = await props.searchParams;
+  const justSubscribed = searchParams?.subscribed === "true";
 
   // Fetch creator data
   const creator = await prisma.creatorProfile.findFirst({
@@ -179,6 +183,19 @@ export default async function CreatorProfilePage({
     }
   }
 
+  // Fetch first content for welcome banner CTA (only if just subscribed)
+  let firstContent: { id: string } | null = null;
+  if (justSubscribed) {
+    firstContent = await prisma.content.findFirst({
+      where: {
+        creatorId: creator.id,
+        status: "published",
+      },
+      select: { id: true },
+      orderBy: { publishedAt: "desc" },
+    });
+  }
+
   const price = PRICE_DISPLAY[creator.subscriptionPrice];
   const initials = creator.displayName
     .split(" ")
@@ -188,9 +205,11 @@ export default async function CreatorProfilePage({
     .slice(0, 2);
 
   return (
-    <main className="min-h-screen bg-background">
-      {/* Cover Image */}
-      <div className="relative h-48 md:h-64 lg:h-80 bg-muted overflow-hidden">
+    <>
+      <SkipLink />
+      <main id="main-content" className="min-h-screen bg-background">
+        {/* Cover Image */}
+        <div className="relative h-48 md:h-64 lg:h-80 bg-muted overflow-hidden">
         {creator.coverImageUrl ? (
           <Image
             src={creator.coverImageUrl}
@@ -231,10 +250,13 @@ export default async function CreatorProfilePage({
                   {creator.displayName}
                 </h1>
                 {creator.isVerified && (
-                  <CheckCircle2
-                    className="size-6 text-primary"
-                    aria-label="Verified Creator"
-                  />
+                  <>
+                    <CheckCircle2
+                      className="size-6 text-primary"
+                      aria-hidden="true"
+                    />
+                    <span className="sr-only">Verified Creator</span>
+                  </>
                 )}
               </div>
               <p className="text-muted-foreground">@{creator.handle}</p>
@@ -316,6 +338,30 @@ export default async function CreatorProfilePage({
           </div>
         )}
 
+        {/* Welcome Banner - Shown after successful subscription */}
+        {justSubscribed && (
+          <div className="mb-8 p-6 rounded-xl bg-primary/10 border border-primary/30 max-w-lg">
+            <div className="flex items-center gap-3 mb-2">
+              <CheckCircle2 className="size-6 text-primary" />
+              <h3 className="font-semibold text-foreground">
+                Welcome to {creator.displayName}&apos;s community!
+              </h3>
+            </div>
+            <p className="text-muted-foreground mb-4">
+              You now have access to all exclusive content. Start your first
+              practice below.
+            </p>
+            {firstContent && (
+              <Link
+                href={`/${creator.handle}/post/${firstContent.id}`}
+                className={cn(buttonVariants(), "min-h-[44px]")}
+              >
+                Start your first practice
+              </Link>
+            )}
+          </div>
+        )}
+
         {/* Subscription CTA Card */}
         {!isSubscribed && (
           <div className="mb-10 p-6 rounded-xl bg-muted/50 border border-border max-w-lg">
@@ -344,7 +390,12 @@ export default async function CreatorProfilePage({
               )}
               <li className="flex items-center gap-2 text-muted-foreground">
                 <CheckCircle2 className="size-4 text-primary" />
-                Cancel anytime from settings
+                <Link
+                  href="/subscriptions"
+                  className="hover:underline hover:text-foreground transition-colors"
+                >
+                  Cancel anytime
+                </Link>
               </li>
             </ul>
             <Link
@@ -375,8 +426,9 @@ export default async function CreatorProfilePage({
             />
           </Suspense>
         </section>
-      </div>
-    </main>
+        </div>
+      </main>
+    </>
   );
 }
 

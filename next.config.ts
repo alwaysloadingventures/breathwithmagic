@@ -1,6 +1,13 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  /**
+   * Enable Turbopack for development and production builds.
+   * Note: Bundle size budgets are configured in webpack for webpack builds.
+   * Turbopack doesn't currently support performance budgets.
+   */
+  turbopack: {},
+
   images: {
     formats: ["image/avif", "image/webp"],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920],
@@ -32,6 +39,24 @@ const nextConfig: NextConfig = {
         hostname: "img.clerk.com", // Clerk user avatars
       },
     ],
+  },
+
+  /**
+   * Webpack configuration for bundle size budgets
+   * Per PRD performance requirements:
+   * - Max asset size: 200KB
+   * - Max entrypoint size: 300KB
+   */
+  webpack: (config, { isServer }) => {
+    if (!isServer) {
+      // Set performance budgets for client-side bundles
+      config.performance = {
+        maxAssetSize: 200000, // 200KB
+        maxEntrypointSize: 300000, // 300KB
+        hints: "warning", // warn but don't fail build
+      };
+    }
+    return config;
   },
 
   async headers() {

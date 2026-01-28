@@ -5,6 +5,7 @@ import { CreatorCategory } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { CreatorCardSkeleton } from "@/components/browse";
 import { ExplorePageClient } from "./explore-page-client";
+import { SkipLink } from "@/components/ui/skip-link";
 
 /**
  * Explore Page - Browse creators with filters
@@ -41,30 +42,33 @@ export default async function ExplorePage({ searchParams }: ExplorePageProps) {
   const initialData = await getInitialCreators(category, searchQuery);
 
   return (
-    <main className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-8 md:py-12">
-        {/* Page Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-semibold text-foreground">
-            Explore creators
-          </h1>
-          <p className="text-muted-foreground mt-2">
-            Find teachers whose practice resonates with yours
-          </p>
-        </div>
+    <>
+      <SkipLink />
+      <main id="main-content" className="min-h-screen bg-background">
+        <div className="container mx-auto px-4 py-8 md:py-12">
+          {/* Page Header */}
+          <div className="mb-8">
+            <h1 className="text-3xl md:text-4xl font-semibold text-foreground">
+              Explore creators
+            </h1>
+            <p className="text-muted-foreground mt-2">
+              Find teachers whose practice resonates with yours
+            </p>
+          </div>
 
-        {/* Client-side interactive components */}
-        <Suspense fallback={<ExplorePageSkeleton />}>
-          <ExplorePageClient
-            initialCreators={initialData.creators}
-            initialNextCursor={initialData.nextCursor}
-            initialCategory={category}
-            initialSearchQuery={searchQuery}
-            totalCount={initialData.totalCount}
-          />
-        </Suspense>
-      </div>
-    </main>
+          {/* Client-side interactive components */}
+          <Suspense fallback={<ExplorePageSkeleton />}>
+            <ExplorePageClient
+              initialCreators={initialData.creators}
+              initialNextCursor={initialData.nextCursor}
+              initialCategory={category}
+              initialSearchQuery={searchQuery}
+              totalCount={initialData.totalCount}
+            />
+          </Suspense>
+        </div>
+      </main>
+    </>
   );
 }
 

@@ -8,6 +8,7 @@ import { Compass, Settings, Heart, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/lib/button-variants";
 import { Skeleton } from "@/components/ui/skeleton";
+import { SkipLink } from "@/components/ui/skip-link";
 import { HomeFeed } from "./home-feed";
 
 /**
@@ -28,9 +29,11 @@ export default async function HomePage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
+    <>
+      <SkipLink />
+      <div className="min-h-screen bg-background">
+        {/* Header */}
+        <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             {/* Logo */}
@@ -116,7 +119,7 @@ export default async function HomePage() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main id="main-content" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Welcome Section */}
         <div className="mb-8">
           <h1 className="text-2xl font-semibold text-foreground mb-1">
@@ -175,7 +178,8 @@ export default async function HomePage() {
           <HomeFeed />
         </Suspense>
       </main>
-    </div>
+      </div>
+    </>
   );
 }
 

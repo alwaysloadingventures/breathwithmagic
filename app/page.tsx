@@ -3,6 +3,7 @@ import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
 import { prisma } from "@/lib/prisma";
+import { getCache, setCache } from "@/lib/cache";
 import { cn } from "@/lib/utils";
 import { buttonVariants } from "@/lib/button-variants";
 import {
@@ -12,6 +13,7 @@ import {
   CreatorCard,
   CreatorCardSkeleton,
 } from "@/components/browse";
+import { SkipLink } from "@/components/ui/skip-link";
 
 /**
  * Homepage - Public landing page
@@ -28,9 +30,11 @@ export const revalidate = 300; // 5 minutes
 
 export default function HomePage() {
   return (
-    <main className="min-h-screen bg-background">
-      {/* Hero Section */}
-      <HeroSection />
+    <>
+      <SkipLink />
+      <main id="main-content" className="min-h-screen bg-background">
+        {/* Hero Section */}
+        <HeroSection />
 
       {/* Social Proof Section */}
       <Suspense fallback={<SocialProofBannerSkeleton />}>
@@ -100,7 +104,7 @@ export default function HomePage() {
                 href={`/explore?category=${category.value}`}
                 className="group p-6 rounded-xl bg-card border border-border hover:border-primary/30 hover:shadow-md transition-all text-center"
               >
-                <span className="text-3xl mb-3 block">{category.icon}</span>
+                <span className="text-3xl mb-3 block" aria-hidden="true">{category.icon}</span>
                 <span className="font-medium text-foreground group-hover:text-primary transition-colors">
                   {category.label}
                 </span>
@@ -143,7 +147,8 @@ export default function HomePage() {
           </div>
         </div>
       </section>
-    </main>
+      </main>
+    </>
   );
 }
 
@@ -185,39 +190,80 @@ async function SocialProofSection() {
 }
 
 /**
+ * Featured creators cache type
+ * Uses Prisma enum types for category and subscriptionPrice
+ */
+import type { CreatorCategory, SubscriptionPriceTier } from "@prisma/client";
+
+interface FeaturedCreator {
+  id: string;
+  handle: string;
+  displayName: string;
+  bio: string | null;
+  avatarUrl: string | null;
+  coverImageUrl: string | null;
+  category: CreatorCategory;
+  subscriptionPrice: SubscriptionPriceTier;
+  trialEnabled: boolean;
+  isVerified: boolean;
+  _count: {
+    subscriptions: number;
+  };
+}
+
+/**
  * Featured Creators - Async Server Component
+ *
+ * Uses Redis caching to reduce database load on the homepage.
+ * Cache TTL: 5 minutes (300 seconds) to match ISR revalidation.
  */
 async function FeaturedCreators() {
-  const creators = await prisma.creatorProfile.findMany({
-    where: {
-      isFeatured: true,
-      status: "active",
-      stripeOnboardingComplete: true,
-    },
-    select: {
-      id: true,
-      handle: true,
-      displayName: true,
-      bio: true,
-      avatarUrl: true,
-      coverImageUrl: true,
-      category: true,
-      subscriptionPrice: true,
-      trialEnabled: true,
-      isVerified: true,
-      _count: {
-        select: {
-          subscriptions: {
-            where: {
-              status: { in: ["active", "trialing"] },
+  const CACHE_KEY = "homepage:featured";
+  const CACHE_TTL = 300; // 5 minutes
+
+  // Try to get from cache first
+  const cached = await getCache<FeaturedCreator[]>(CACHE_KEY);
+
+  let creators: FeaturedCreator[];
+
+  if (cached) {
+    creators = cached;
+  } else {
+    // Fetch from database
+    creators = await prisma.creatorProfile.findMany({
+      where: {
+        isFeatured: true,
+        status: "active",
+        stripeOnboardingComplete: true,
+      },
+      select: {
+        id: true,
+        handle: true,
+        displayName: true,
+        bio: true,
+        avatarUrl: true,
+        coverImageUrl: true,
+        category: true,
+        subscriptionPrice: true,
+        trialEnabled: true,
+        isVerified: true,
+        _count: {
+          select: {
+            subscriptions: {
+              where: {
+                status: { in: ["active", "trialing"] },
+              },
             },
           },
         },
       },
-    },
-    orderBy: { createdAt: "desc" },
-    take: 6,
-  });
+      orderBy: { createdAt: "desc" },
+      take: 6,
+    });
+
+    // Cache the result
+    await setCache(CACHE_KEY, creators, CACHE_TTL);
+  }
 
   if (creators.length === 0) {
     return (
@@ -232,7 +278,7 @@ async function FeaturedCreators() {
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-      {creators.map((creator) => (
+      {creators.map((creator, index) => (
         <CreatorCard
           key={creator.id}
           handle={creator.handle}
@@ -245,6 +291,8 @@ async function FeaturedCreators() {
           trialEnabled={creator.trialEnabled}
           isVerified={creator.isVerified}
           subscriberCount={creator._count.subscriptions}
+          // Prioritize first 3 cards for LCP optimization (above the fold on desktop)
+          priority={index < 3}
         />
       ))}
     </div>

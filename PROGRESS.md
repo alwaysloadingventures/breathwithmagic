@@ -2,7 +2,7 @@
 
 Last Updated: 2026-01-27
 Current Phase: 3 (User Experience)
-Current Task: 3.4 complete, ready for 3.5
+Current Task: 3.5 complete, Phase 3 COMPLETE
 
 ---
 
@@ -12,7 +12,7 @@ Current Task: 3.4 complete, ready for 3.5
 | --------------------------- | -------------- | --------- |
 | Phase 1: Foundation         | ✅ Complete    | 3/3 tasks |
 | Phase 2: Creator Experience | ✅ Complete    | 4/4 tasks |
-| Phase 3: User Experience    | 🔄 In Progress | 4/5 tasks |
+| Phase 3: User Experience    | ✅ Complete    | 5/5 tasks |
 | Phase 4: Messaging          | ⏳ Not Started | 0/2 tasks |
 | Phase 5: Notifications      | ⏳ Not Started | 0/2 tasks |
 | Phase 6: Polish & Launch    | ⏳ Not Started | 0/4 tasks |
@@ -144,27 +144,27 @@ Current Task: 3.4 complete, ready for 3.5
 
 ### Task 3.4: Content Consumption
 
-| Step                 | Status          | Agent                 | Notes                                        |
-| -------------------- | --------------- | --------------------- | -------------------------------------------- |
-| Implementation       | ✅ Complete     | coder                 | Feed, video/audio players, paywall overlay   |
-| Linting              | ✅ Pass         | linter                | Prettier fixed                               |
-| Code Review          | ✅ Approved     | code-reviewer         | All PRD requirements verified                |
-| UI Review            | ✅ Approved     | ui                    | Critical fixes applied (volume, contrast)    |
-| QA                   | ✅ Passed       | qa                    | All test cases passed, production ready      |
-| Accessibility Review | ✅ Approved     | accessibility-auditor | WCAG 2.1 AA fixes: live regions, focus mgmt  |
-| **Task Status**      | ✅ **COMPLETE** |                       |                                              |
+| Step                 | Status          | Agent                 | Notes                                       |
+| -------------------- | --------------- | --------------------- | ------------------------------------------- |
+| Implementation       | ✅ Complete     | coder                 | Feed, video/audio players, paywall overlay  |
+| Linting              | ✅ Pass         | linter                | Prettier fixed                              |
+| Code Review          | ✅ Approved     | code-reviewer         | All PRD requirements verified               |
+| UI Review            | ✅ Approved     | ui                    | Critical fixes applied (volume, contrast)   |
+| QA                   | ✅ Passed       | qa                    | All test cases passed, production ready     |
+| Accessibility Review | ✅ Approved     | accessibility-auditor | WCAG 2.1 AA fixes: live regions, focus mgmt |
+| **Task Status**      | ✅ **COMPLETE** |                       |                                             |
 
 ### Task 3.5: Paywall Enforcement
 
-| Step            | Status         | Agent            | Notes |
-| --------------- | -------------- | ---------------- | ----- |
-| Implementation  | ⏳ Pending     | coder            |       |
-| Linting         | ⏳ Pending     | linter           |       |
-| Code Review     | ⏳ Pending     | code-reviewer    |       |
-| UI Review       | ⏳ Pending     | ui               |       |
-| QA              | ⏳ Pending     | qa               |       |
-| Security Review | ⏳ Pending     | security-auditor |       |
-| **Task Status** | ⏳ **PENDING** |                  |       |
+| Step            | Status          | Agent            | Notes                                           |
+| --------------- | --------------- | ---------------- | ----------------------------------------------- |
+| Implementation  | ✅ Complete     | coder            | Signed URLs, Redis cache, secure players        |
+| Linting         | ✅ Pass         | linter           | 0 errors, 0 warnings                            |
+| Code Review     | ✅ Approved     | code-reviewer    | ContentView upsert, cache invalidation fixed    |
+| UI Review       | ✅ Approved     | ui               | Touch targets 44px, calm error states           |
+| QA              | ✅ Passed       | qa               | Canceled subscription grace period fixed        |
+| Security Review | ✅ Approved     | security-auditor | Fail-closed on error, recommendations noted     |
+| **Task Status** | ✅ **COMPLETE** |                  |                                                 |
 
 ---
 
@@ -296,11 +296,36 @@ Current Task: 3.4 complete, ready for 3.5
 
 ### Phase 3 Completion
 
-| Review                         | Status     | Agent                 |
-| ------------------------------ | ---------- | --------------------- |
-| Onboarding Review (Subscriber) | ⏳ Pending | onboarding-reviewer   |
-| Accessibility Audit (Full)     | ⏳ Pending | accessibility-auditor |
-| Performance Audit              | ⏳ Pending | performance-auditor   |
+| Review                         | Status       | Agent                 | Notes                                     |
+| ------------------------------ | ------------ | --------------------- | ----------------------------------------- |
+| Onboarding Review (Subscriber) | ✅ Fixed     | onboarding-reviewer   | Welcome banner, trial messaging, loading  |
+| Accessibility Audit (Full)     | ✅ Fixed     | accessibility-auditor | Skip links, aria-labels, focus, motion    |
+| Performance Audit              | ✅ Fixed     | performance-auditor   | LCP priority, bundle budgets, Redis cache |
+
+**Phase 3 Review Fixes Applied:**
+
+**Accessibility (All 4 critical fixed):**
+- ✅ Removed `aria-hidden` from video/audio, added proper labels
+- ✅ Added skip links to all main pages
+- ✅ Fixed search input label association
+- ✅ Added focus ring to big play button
+- ✅ Added `prefers-reduced-motion` support
+
+**Performance (Key P0 fixed):**
+- ✅ Added `priority` prop to LCP images
+- ✅ Verified `sizes` attributes present
+- ✅ Configured bundle budgets (200KB/300KB)
+- ✅ Added Redis caching to homepage queries
+- ✅ Dynamic imports for video/audio players
+- ⏳ Cloudflare Stream migration deferred (current player works)
+
+**Onboarding (Both blockers fixed):**
+- ✅ `?subscribed=true` shows welcome banner + first content CTA
+- ✅ Standardized trial messaging: "7 days free, then $X/month"
+- ✅ Subscribe button has loading state
+- ✅ "Cancel anytime" is now clickable link
+
+**Phase 3 fully complete. Ready for Phase 4.**
 
 ### Phase 6 Completion (Pre-Launch)
 

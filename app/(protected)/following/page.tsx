@@ -6,6 +6,7 @@ import { Heart, Search } from "lucide-react";
 
 import { prisma } from "@/lib/prisma";
 import { Button } from "@/components/ui/button";
+import { SkipLink } from "@/components/ui/skip-link";
 import { FollowingClient } from "./following-client";
 
 export const metadata: Metadata = {
@@ -105,9 +106,11 @@ export default async function FollowingPage() {
   }));
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
+    <>
+      <SkipLink />
+      <div className="min-h-screen bg-background">
+        {/* Header */}
+        <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-4">
@@ -144,7 +147,7 @@ export default async function FollowingPage() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main id="main-content" className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Info Banner */}
         <div className="mb-8 p-4 rounded-lg bg-muted/50 border border-border flex items-start gap-3">
           <Heart className="size-5 text-primary mt-0.5 flex-shrink-0" />
@@ -169,7 +172,8 @@ export default async function FollowingPage() {
           />
         )}
       </main>
-    </div>
+      </div>
+    </>
   );
 }
 

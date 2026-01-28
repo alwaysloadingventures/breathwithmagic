@@ -105,16 +105,19 @@ export function SearchInput({
 
   return (
     <div className={cn("relative", className)}>
-      <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+      <label htmlFor="search-input" className="sr-only">
+        Search creators
+      </label>
+      <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" aria-hidden="true" />
       <Input
         ref={inputRef}
+        id="search-input"
         type="search"
         value={inputValue}
         onChange={handleChange}
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
         className="pl-10 pr-10 h-11 min-h-[44px]"
-        aria-label="Search"
       />
       {inputValue && (
         <Button
@@ -124,7 +127,7 @@ export function SearchInput({
           onClick={handleClear}
           aria-label="Clear search"
         >
-          <X className="size-4" />
+          <X className="size-4" aria-hidden="true" />
         </Button>
       )}
     </div>

@@ -56,6 +56,8 @@ export interface CreatorCardProps {
   subscriberCount?: number;
   /** Custom className for card */
   className?: string;
+  /** Whether to prioritize image loading (for LCP optimization) */
+  priority?: boolean;
 }
 
 /**
@@ -76,6 +78,7 @@ export function CreatorCard({
   isVerified = false,
   subscriberCount,
   className,
+  priority = false,
 }: CreatorCardProps) {
   const initials = displayName
     .split(" ")
@@ -101,6 +104,7 @@ export function CreatorCard({
               fill
               className="object-cover transition-transform duration-300 group-hover:scale-105"
               sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+              priority={priority}
             />
           ) : (
             <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-accent" />

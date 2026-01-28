@@ -272,7 +272,7 @@ export function AudioPlayer({
       <audio
         ref={audioRef}
         src={src}
-        aria-hidden="true"
+        aria-label={creatorName ? `${title} by ${creatorName}` : title}
         onPlay={handlePlay}
         onPause={handlePause}
         onEnded={handleEnded}

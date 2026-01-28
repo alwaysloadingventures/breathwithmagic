@@ -4,24 +4,44 @@
  * ContentViewClient - Client component for content display
  *
  * Handles:
- * - Video player for video content
- * - Audio player for audio content
+ * - Secure video player for video content (with signed URLs)
+ * - Secure audio player for audio content (with signed URLs)
  * - Text display for text posts
  * - Paywall overlay for non-subscribers
+ *
+ * Security:
+ * - Uses SecureVideoPlayer/SecureAudioPlayer for paid content
+ * - These players fetch signed URLs from /api/content/[id]/media
+ * - Periodic revalidation ensures access is maintained during playback
+ *
+ * @see PRD Phase 3, Task 12: Paywall Enforcement
  */
 
 import dynamic from "next/dynamic";
 import { FileText } from "lucide-react";
 import { PaywallOverlay } from "@/components/content/paywall-overlay";
-import { AudioPlayer } from "@/components/content/audio-player";
 import { Skeleton } from "@/components/ui/skeleton";
 
-// Lazy load video player for better performance
-const VideoPlayer = dynamic(
+// Lazy load secure video player for better performance
+const SecureVideoPlayer = dynamic(
   () =>
-    import("@/components/content/video-player").then((mod) => mod.VideoPlayer),
+    import("@/components/content/secure-video-player").then(
+      (mod) => mod.SecureVideoPlayer,
+    ),
   {
     loading: () => <VideoPlayerSkeleton />,
+    ssr: false,
+  },
+);
+
+// Lazy load secure audio player for better performance
+const SecureAudioPlayer = dynamic(
+  () =>
+    import("@/components/content/secure-audio-player").then(
+      (mod) => mod.SecureAudioPlayer,
+    ),
+  {
+    loading: () => <AudioPlayerSkeleton />,
     ssr: false,
   },
 );
@@ -73,31 +93,39 @@ export function ContentViewClient({
     );
   }
 
-  // Video content
+  // Video content - use SecureVideoPlayer which fetches signed URLs
+  // The SecureVideoPlayer handles:
+  // - Fetching signed URLs from /api/content/[id]/media
+  // - Periodic revalidation during playback
+  // - Automatic URL refresh before expiration
+  // - Displaying paywall if access is revoked
   if (type === "video" && mediaUrl) {
     return (
-      <VideoPlayer
-        src={mediaUrl}
-        poster={thumbnailUrl}
+      <SecureVideoPlayer
+        contentId={contentId}
         title={title}
         duration={duration}
-        contentId={contentId}
+        poster={thumbnailUrl}
         initialPosition={initialPosition}
       />
     );
   }
 
-  // Audio content
+  // Audio content - use SecureAudioPlayer which fetches signed URLs
+  // The SecureAudioPlayer handles:
+  // - Fetching signed URLs from /api/content/[id]/media
+  // - Periodic revalidation during playback
+  // - Automatic URL refresh before expiration
+  // - Displaying paywall if access is revoked
   if (type === "audio" && mediaUrl) {
     return (
-      <AudioPlayer
-        src={mediaUrl}
+      <SecureAudioPlayer
+        contentId={contentId}
         title={title}
         duration={duration}
-        contentId={contentId}
-        initialPosition={initialPosition}
         artwork={thumbnailUrl}
         creatorName={creatorName}
+        initialPosition={initialPosition}
       />
     );
   }
@@ -141,6 +169,24 @@ function VideoPlayerSkeleton() {
     <div className="aspect-video bg-muted rounded-lg animate-pulse flex items-center justify-center">
       <div className="w-16 h-16 bg-muted-foreground/20 rounded-full flex items-center justify-center">
         <Skeleton className="w-8 h-8 rounded" />
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Audio Player Skeleton
+ */
+function AudioPlayerSkeleton() {
+  return (
+    <div className="bg-card border border-border rounded-xl p-4">
+      <div className="flex items-center gap-4">
+        <Skeleton className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg shrink-0" />
+        <div className="flex-1 space-y-2">
+          <Skeleton className="h-5 w-2/3" />
+          <Skeleton className="h-4 w-1/3" />
+          <Skeleton className="h-2 w-full mt-4" />
+        </div>
       </div>
     </div>
   );

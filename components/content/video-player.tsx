@@ -391,7 +391,7 @@ export function VideoPlayer({
         src={src}
         poster={poster || undefined}
         playsInline
-        aria-hidden="true"
+        aria-label={title}
         onPlay={handlePlay}
         onPause={handlePause}
         onEnded={handleEnded}
@@ -556,11 +556,11 @@ export function VideoPlayer({
       {/* Big Play Button (when paused) */}
       {!isPlaying && !isBuffering && (
         <button
-          className="absolute inset-0 flex items-center justify-center cursor-pointer"
+          className="absolute inset-0 flex items-center justify-center cursor-pointer focus:outline-none"
           onClick={togglePlay}
           aria-label="Play video"
         >
-          <div className="w-20 h-20 bg-primary/90 rounded-full flex items-center justify-center hover:bg-primary transition-colors">
+          <div className="w-20 h-20 bg-primary/90 rounded-full flex items-center justify-center hover:bg-primary transition-colors focus-visible:ring-4 focus-visible:ring-primary/50">
             <Play
               className="size-10 text-primary-foreground ml-1"
               fill="currentColor"
