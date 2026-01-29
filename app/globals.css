@@ -80,20 +80,20 @@
   --card-foreground: hsl(30, 10%, 15%);
   --popover: hsl(30, 20%, 98%);
   --popover-foreground: hsl(30, 10%, 15%);
-  --primary: hsl(25, 30%, 45%); /* terracotta */
+  --primary: hsl(25, 30%, 40%); /* terracotta - darkened for WCAG AA contrast */
   --primary-foreground: hsl(30, 20%, 98%);
   --secondary: hsl(35, 20%, 92%); /* soft warm secondary */
   --secondary-foreground: hsl(30, 10%, 15%);
   --muted: hsl(30, 15%, 94%); /* soft warm gray */
-  --muted-foreground: hsl(30, 10%, 45%); /* medium warm gray */
+  --muted-foreground: hsl(30, 10%, 40%); /* medium warm gray - WCAG AA compliant */
   --accent: hsl(35, 25%, 90%); /* warm cream */
   --accent-foreground: hsl(30, 10%, 15%);
   --destructive: hsl(0, 65%, 50%);
   --destructive-foreground: hsl(30, 20%, 98%);
   --border: hsl(30, 15%, 88%); /* subtle warm border */
   --input: hsl(30, 15%, 88%);
-  --ring: hsl(25, 30%, 45%); /* terracotta ring */
-  --chart-1: hsl(25, 30%, 45%); /* terracotta */
+  --ring: hsl(25, 30%, 40%); /* terracotta ring - WCAG AA compliant */
+  --chart-1: hsl(25, 30%, 40%); /* terracotta - WCAG AA compliant */
   --chart-2: hsl(35, 25%, 60%); /* warm tan */
   --chart-3: hsl(20, 20%, 55%); /* warm brown */
   --chart-4: hsl(30, 15%, 70%); /* muted warm */
@@ -101,12 +101,12 @@
   --radius: 0.75rem;
   --sidebar: hsl(30, 15%, 96%);
   --sidebar-foreground: hsl(30, 10%, 15%);
-  --sidebar-primary: hsl(25, 30%, 45%);
+  --sidebar-primary: hsl(25, 30%, 40%);
   --sidebar-primary-foreground: hsl(30, 20%, 98%);
   --sidebar-accent: hsl(35, 25%, 90%);
   --sidebar-accent-foreground: hsl(30, 10%, 15%);
   --sidebar-border: hsl(30, 15%, 88%);
-  --sidebar-ring: hsl(25, 30%, 45%);
+  --sidebar-ring: hsl(25, 30%, 40%);
   --font-sans: Inter, sans-serif;
   --font-serif: Georgia, serif;
   --font-mono: monospace;
@@ -219,5 +219,112 @@
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ============================================
+   Mobile Optimization Utilities
+   ============================================ */
+
+/* Safe area insets for notched phones (iPhone X+, Android notches) */
+.pb-safe-area-inset-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.pt-safe-area-inset-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.pl-safe-area-inset-left {
+  padding-left: env(safe-area-inset-left, 0px);
+}
+
+.pr-safe-area-inset-right {
+  padding-right: env(safe-area-inset-right, 0px);
+}
+
+/* Combined safe area padding */
+.p-safe-area-inset {
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-left: env(safe-area-inset-left, 0px);
+}
+
+/* Prevent iOS zoom on form inputs by ensuring minimum 16px font-size */
+@media screen and (max-width: 768px) {
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="search"],
+  input[type="tel"],
+  input[type="url"],
+  input[type="number"],
+  textarea,
+  select {
+    font-size: 16px !important;
+  }
+}
+
+/* Touch target minimum size utility */
+.touch-target {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Hide scrollbar but allow scrolling (for horizontal nav) */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Mobile bottom navigation spacer */
+.mobile-nav-spacer {
+  height: calc(72px + env(safe-area-inset-bottom, 0px));
+}
+
+/* Ensure interactive elements are easily tappable on mobile */
+@media (pointer: coarse) {
+  button,
+  [role="button"],
+  a,
+  input[type="checkbox"],
+  input[type="radio"],
+  select {
+    min-height: 44px;
+  }
+}
+
+/* Full-width containers on mobile */
+@media screen and (max-width: 640px) {
+  .mobile-full-width {
+    width: 100%;
+    max-width: 100%;
+    margin-left: 0;
+    margin-right: 0;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}
+
+/* Horizontal scroll container for mobile */
+.mobile-scroll-x {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x mandatory;
+}
+
+.mobile-scroll-x > * {
+  scroll-snap-align: start;
+}
+
+/* Active state feedback for touch devices */
+@media (hover: none) and (pointer: coarse) {
+  .tap-highlight {
+    -webkit-tap-highlight-color: hsl(var(--primary) / 0.1);
   }
 }

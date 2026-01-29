@@ -205,10 +205,10 @@ export async function GET(
     const errorResponse: RevalidateResponse = {
       error: "Failed to revalidate access",
       code: "SERVER_ERROR",
-      valid: false,       // Fail closed for security
-      retryable: true,    // Client should retry
-      retryAfter: 10,     // Suggest retry in 10 seconds
-      maxRetries: 3,      // Allow 3 retries before stopping
+      valid: false, // Fail closed for security
+      retryable: true, // Client should retry
+      retryAfter: 10, // Suggest retry in 10 seconds
+      maxRetries: 3, // Allow 3 retries before stopping
       expiresIn: 0,
       nextCheckIn: 10,
     };
@@ -361,10 +361,10 @@ export async function POST(
     const errorResponse: RevalidateResponse = {
       error: "Failed to revalidate access",
       code: "SERVER_ERROR",
-      valid: false,       // Fail closed for security
-      retryable: true,    // Client should retry
-      retryAfter: 10,     // Suggest retry in 10 seconds
-      maxRetries: 3,      // Allow 3 retries before stopping
+      valid: false, // Fail closed for security
+      retryable: true, // Client should retry
+      retryAfter: 10, // Suggest retry in 10 seconds
+      maxRetries: 3, // Allow 3 retries before stopping
       expiresIn: 0,
       nextCheckIn: 10,
     };

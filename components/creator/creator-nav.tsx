@@ -10,6 +10,7 @@ import {
   Users,
   Settings,
   ExternalLink,
+  MessageSquare,
 } from "lucide-react";
 
 interface CreatorNavProps {
@@ -26,6 +27,11 @@ const navItems = [
     label: "Content",
     href: "/creator/content",
     icon: Video,
+  },
+  {
+    label: "Messages",
+    href: "/creator/messages",
+    icon: MessageSquare,
   },
   {
     label: "Analytics",

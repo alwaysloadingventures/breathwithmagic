@@ -36,117 +36,119 @@ export default function HomePage() {
         {/* Hero Section */}
         <HeroSection />
 
-      {/* Social Proof Section */}
-      <Suspense fallback={<SocialProofBannerSkeleton />}>
-        <SocialProofSection />
-      </Suspense>
+        {/* Social Proof Section */}
+        <Suspense fallback={<SocialProofBannerSkeleton />}>
+          <SocialProofSection />
+        </Suspense>
 
-      {/* Featured Creators Section */}
-      <section className="py-16 md:py-20">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between mb-8">
-            <div>
+        {/* Featured Creators Section */}
+        <section className="py-16 md:py-20">
+          <div className="container mx-auto px-4">
+            <div className="flex items-center justify-between mb-8">
+              <div>
+                <h2 className="text-2xl md:text-3xl font-semibold text-foreground">
+                  Featured creators
+                </h2>
+                <p className="text-muted-foreground mt-2">
+                  Discover teachers handpicked for their exceptional practices
+                </p>
+              </div>
+              <Link
+                href="/explore"
+                className={cn(
+                  buttonVariants({ variant: "outline" }),
+                  "hidden sm:flex",
+                )}
+              >
+                View all
+                <ArrowRight className="ml-2 size-4" />
+              </Link>
+            </div>
+
+            <Suspense fallback={<FeaturedCreatorsSkeleton />}>
+              <FeaturedCreators />
+            </Suspense>
+
+            {/* Mobile CTA */}
+            <div className="mt-8 sm:hidden">
+              <Link
+                href="/explore"
+                className={cn(
+                  buttonVariants({ variant: "outline" }),
+                  "w-full min-h-[44px] flex items-center justify-center",
+                )}
+              >
+                View all creators
+                <ArrowRight className="ml-2 size-4" />
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        {/* Categories Section */}
+        <section className="py-16 bg-muted/30">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-10">
               <h2 className="text-2xl md:text-3xl font-semibold text-foreground">
-                Featured creators
+                Explore by practice
               </h2>
               <p className="text-muted-foreground mt-2">
-                Discover teachers handpicked for their exceptional practices
+                Find the modality that resonates with you
               </p>
             </div>
-            <Link
-              href="/explore"
-              className={cn(
-                buttonVariants({ variant: "outline" }),
-                "hidden sm:flex",
-              )}
-            >
-              View all
-              <ArrowRight className="ml-2 size-4" />
-            </Link>
+
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+              {CATEGORIES.map((category) => (
+                <Link
+                  key={category.value}
+                  href={`/explore?category=${category.value}`}
+                  className="group p-6 rounded-xl bg-card border border-border hover:border-primary/30 hover:shadow-md transition-all text-center"
+                >
+                  <span className="text-3xl mb-3 block" aria-hidden="true">
+                    {category.icon}
+                  </span>
+                  <span className="font-medium text-foreground group-hover:text-primary transition-colors">
+                    {category.label}
+                  </span>
+                </Link>
+              ))}
+            </div>
           </div>
+        </section>
 
-          <Suspense fallback={<FeaturedCreatorsSkeleton />}>
-            <FeaturedCreators />
-          </Suspense>
-
-          {/* Mobile CTA */}
-          <div className="mt-8 sm:hidden">
-            <Link
-              href="/explore"
-              className={cn(
-                buttonVariants({ variant: "outline" }),
-                "w-full min-h-[44px] flex items-center justify-center",
-              )}
-            >
-              View all creators
-              <ArrowRight className="ml-2 size-4" />
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      {/* Categories Section */}
-      <section className="py-16 bg-muted/30">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-10">
-            <h2 className="text-2xl md:text-3xl font-semibold text-foreground">
-              Explore by practice
+        {/* Final CTA Section */}
+        <section className="py-20 bg-gradient-to-t from-accent/30 to-background">
+          <div className="container mx-auto px-4 text-center">
+            <h2 className="text-2xl md:text-3xl font-semibold text-foreground mb-4">
+              Ready to start your practice?
             </h2>
-            <p className="text-muted-foreground mt-2">
-              Find the modality that resonates with you
+            <p className="text-muted-foreground mb-8 max-w-xl mx-auto">
+              Join thousands of people who have found their favorite teachers on
+              breathwithmagic. Start exploring today.
             </p>
-          </div>
-
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-            {CATEGORIES.map((category) => (
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
-                key={category.value}
-                href={`/explore?category=${category.value}`}
-                className="group p-6 rounded-xl bg-card border border-border hover:border-primary/30 hover:shadow-md transition-all text-center"
+                href="/explore"
+                className={cn(
+                  buttonVariants({ size: "lg" }),
+                  "min-h-[48px] px-8 text-base font-medium",
+                )}
               >
-                <span className="text-3xl mb-3 block" aria-hidden="true">{category.icon}</span>
-                <span className="font-medium text-foreground group-hover:text-primary transition-colors">
-                  {category.label}
-                </span>
+                Explore creators
+                <ArrowRight className="ml-2 size-4" />
               </Link>
-            ))}
+              <Link
+                href="/become-creator"
+                className={cn(
+                  buttonVariants({ variant: "outline", size: "lg" }),
+                  "min-h-[48px] px-8 text-base font-medium",
+                )}
+              >
+                Share your practice
+              </Link>
+            </div>
           </div>
-        </div>
-      </section>
-
-      {/* Final CTA Section */}
-      <section className="py-20 bg-gradient-to-t from-accent/30 to-background">
-        <div className="container mx-auto px-4 text-center">
-          <h2 className="text-2xl md:text-3xl font-semibold text-foreground mb-4">
-            Ready to start your practice?
-          </h2>
-          <p className="text-muted-foreground mb-8 max-w-xl mx-auto">
-            Join thousands of people who have found their favorite teachers on
-            breathwithmagic. Start exploring today.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link
-              href="/explore"
-              className={cn(
-                buttonVariants({ size: "lg" }),
-                "min-h-[48px] px-8 text-base font-medium",
-              )}
-            >
-              Explore creators
-              <ArrowRight className="ml-2 size-4" />
-            </Link>
-            <Link
-              href="/become-creator"
-              className={cn(
-                buttonVariants({ variant: "outline", size: "lg" }),
-                "min-h-[48px] px-8 text-base font-medium",
-              )}
-            >
-              Share your practice
-            </Link>
-          </div>
-        </div>
-      </section>
+        </section>
       </main>
     </>
   );

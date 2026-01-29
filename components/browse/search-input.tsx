@@ -108,7 +108,10 @@ export function SearchInput({
       <label htmlFor="search-input" className="sr-only">
         Search creators
       </label>
-      <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" aria-hidden="true" />
+      <Search
+        className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none"
+        aria-hidden="true"
+      />
       <Input
         ref={inputRef}
         id="search-input"

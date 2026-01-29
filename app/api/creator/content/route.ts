@@ -14,6 +14,8 @@ import {
 } from "@/lib/validations/content";
 import { uploadRateLimiter } from "@/lib/rate-limit";
 import { sanitizeHtml } from "@/lib/sanitize";
+import { sendNewContentEmailsToSubscribers } from "@/lib/email";
+import { notifyNewContent } from "@/lib/notifications";
 
 /**
  * POST /api/creator/content
@@ -51,12 +53,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get user and creator profile
+    // Get user and creator profile (include displayName for notifications)
     const user = await prisma.user.findUnique({
       where: { clerkId },
       include: {
         creatorProfile: {
-          select: { id: true, status: true },
+          select: { id: true, status: true, displayName: true },
         },
       },
     });
@@ -131,6 +133,30 @@ export async function POST(request: NextRequest) {
         publishedAt: data.status === "published" ? new Date() : null,
       },
     });
+
+    // Send notifications if published directly (fire and forget - don't block response)
+    if (data.status === "published") {
+      const creatorId = user.creatorProfile.id;
+      const creatorName = user.creatorProfile.displayName;
+      const contentTitle = content.title;
+      const contentId = content.id;
+
+      // Send in-app notifications
+      notifyNewContent(creatorId, creatorName, contentTitle, contentId).catch(
+        (error) =>
+          console.error("Error sending new content in-app notifications:", error),
+      );
+
+      // Send email notifications
+      sendNewContentEmailsToSubscribers(
+        creatorId,
+        creatorName,
+        contentTitle,
+        contentId,
+      ).catch((error) =>
+        console.error("Error sending new content email notifications:", error),
+      );
+    }
 
     return NextResponse.json({
       success: true,

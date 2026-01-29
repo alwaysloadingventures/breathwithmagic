@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { NotificationBell } from "@/components/notifications";
 
 /**
  * Creator Dashboard Header
@@ -15,10 +18,11 @@ export function CreatorHeader() {
         >
           breathwithmagic
         </Link>
-        <nav className="flex items-center gap-4">
+        <nav className="flex items-center gap-2">
+          <NotificationBell />
           <Link
             href="/home"
-            className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+            className="text-sm text-muted-foreground transition-colors hover:text-foreground ml-2"
           >
             Browse
           </Link>

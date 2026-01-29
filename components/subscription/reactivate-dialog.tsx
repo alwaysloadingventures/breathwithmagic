@@ -83,9 +83,7 @@ export function ReactivateSubscriptionDialog({
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>
-            Reactivate subscription to {creatorName}?
-          </DialogTitle>
+          <DialogTitle>Reactivate subscription to {creatorName}?</DialogTitle>
           <DialogDescription>
             Your subscription will continue automatically.
           </DialogDescription>

@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import Image from "next/image";
-import { ImageIcon, X, AlertCircle, Upload } from "lucide-react";
+import { ImageIcon, X, AlertCircle, Upload, Camera } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
@@ -10,6 +10,15 @@ import { Button } from "@/components/ui/button";
  * Upload status types
  */
 type UploadStatus = "idle" | "preparing" | "uploading" | "complete" | "error";
+
+/**
+ * Note: Modern browsers automatically handle EXIF orientation via
+ * CSS image-orientation: from-image (default in all modern browsers).
+ * No additional JavaScript processing is needed for camera-captured images.
+ *
+ * The accept="image/*" attribute with capture on mobile devices will
+ * trigger the camera app, which properly saves orientation metadata.
+ */
 
 /**
  * ThumbnailUploader Props
@@ -24,6 +33,10 @@ interface ThumbnailUploaderProps {
   disabled?: boolean;
   className?: string;
   aspectRatio?: "video" | "square" | "banner";
+  /** Enable camera capture on mobile devices */
+  enableCamera?: boolean;
+  /** Camera capture mode: "user" for selfie, "environment" for rear camera */
+  cameraMode?: "user" | "environment";
 }
 
 /**
@@ -42,6 +55,8 @@ export function ThumbnailUploader({
   disabled = false,
   className,
   aspectRatio = "video",
+  enableCamera = false,
+  cameraMode = "environment",
 }: ThumbnailUploaderProps) {
   const [status, setStatus] = useState<UploadStatus>(
     currentUrl ? "complete" : "idle",
@@ -281,14 +296,15 @@ export function ThumbnailUploader({
           </>
         ) : (
           <>
-            {/* Upload input */}
+            {/* Upload input - supports camera capture on mobile */}
             <input
               type="file"
-              accept="image/jpeg,image/png,image/webp,image/gif"
+              accept="image/*"
+              capture={enableCamera ? cameraMode : undefined}
               onChange={handleFileSelect}
               disabled={disabled || status === "uploading"}
-              className="absolute inset-0 z-10 cursor-pointer opacity-0"
-              aria-label={`Upload ${getLabel().toLowerCase()}`}
+              className="absolute inset-0 z-10 cursor-pointer opacity-0 min-h-[44px]"
+              aria-label={`Upload ${getLabel().toLowerCase()}${enableCamera ? " or take photo" : ""}`}
             />
 
             {/* Placeholder */}
@@ -302,13 +318,19 @@ export function ThumbnailUploader({
                 </>
               ) : (
                 <>
-                  <ImageIcon className="size-8 text-muted-foreground" />
+                  {enableCamera ? (
+                    <Camera className="size-8 text-muted-foreground" />
+                  ) : (
+                    <ImageIcon className="size-8 text-muted-foreground" />
+                  )}
                   <div className="text-center">
                     <p className="text-sm font-medium">
-                      Click to upload {getLabel().toLowerCase()}
+                      {enableCamera
+                        ? `Tap to take ${purpose === "avatar" ? "a photo" : `${getLabel().toLowerCase()} photo`}`
+                        : `Click to upload ${getLabel().toLowerCase()}`}
                     </p>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      JPEG, PNG, WebP, or GIF (max 2MB)
+                      {enableCamera ? "Or choose from library" : "JPEG, PNG, WebP, or GIF (max 2MB)"}
                     </p>
                   </div>
                 </>

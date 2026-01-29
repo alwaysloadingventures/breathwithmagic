@@ -35,6 +35,15 @@ import {
 import { prisma } from "@/lib/prisma";
 import type { Stripe } from "stripe";
 import type { SubscriptionStatus } from "@prisma/client";
+import {
+  sendTrialEndingEmail,
+  sendPaymentFailedEmail,
+  sendSubscriptionConfirmationEmail,
+} from "@/lib/email";
+import {
+  notifyTrialEnding,
+  notifyPaymentFailed,
+} from "@/lib/notifications";
 
 /**
  * Disable body parsing - we need the raw body for signature verification
@@ -325,7 +334,7 @@ async function handleCheckoutSessionCompleted(
 
 /**
  * Handle customer.subscription.created event
- * Confirms subscription exists in DB, creates if missing
+ * Confirms subscription exists in DB, creates if missing, sends confirmation email.
  */
 async function handleSubscriptionCreated(
   subscription: Stripe.Subscription,
@@ -343,7 +352,7 @@ async function handleSubscriptionCreated(
   // Get creator price for grandfathered pricing
   const creator = await prisma.creatorProfile.findUnique({
     where: { id: creatorId },
-    select: { subscriptionPrice: true },
+    select: { subscriptionPrice: true, displayName: true },
   });
 
   if (!creator) {
@@ -386,6 +395,18 @@ async function handleSubscriptionCreated(
   });
 
   console.log(`Subscription confirmed: ${subscription.id} (${status})`);
+
+  // Send subscription confirmation email (fire and forget)
+  // Only send if not trialing (trialing users will get a welcome email differently)
+  if (status === "active") {
+    sendSubscriptionConfirmationEmail(
+      userId,
+      creator.displayName,
+      priceAtPurchase,
+    ).catch((error) =>
+      console.error("Error sending subscription confirmation email:", error),
+    );
+  }
 }
 
 /**
@@ -524,14 +545,22 @@ async function handleSubscriptionDeleted(
 
 /**
  * Handle customer.subscription.trial_will_end event
- * Logs for notification system (Phase 5)
+ * Sends email and in-app notification to the subscriber.
+ * Stripe sends this event 3 days before trial ends.
  */
 async function handleTrialWillEnd(
   subscription: Stripe.Subscription,
 ): Promise<void> {
   const dbSubscription = await prisma.subscription.findUnique({
     where: { stripeSubscriptionId: subscription.id },
-    select: { id: true, userId: true, creatorId: true },
+    select: {
+      id: true,
+      userId: true,
+      creatorId: true,
+      creator: {
+        select: { displayName: true, handle: true },
+      },
+    },
   });
 
   if (!dbSubscription) {
@@ -545,20 +574,38 @@ async function handleTrialWillEnd(
     ? new Date(subscription.trial_end * 1000)
     : null;
 
+  // Calculate days remaining
+  const now = new Date();
+  const daysRemaining = trialEnd
+    ? Math.ceil((trialEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+    : 3;
+
   console.log(
-    `Trial ending soon: ${subscription.id} (ends ${trialEnd?.toISOString()})`,
+    `Trial ending soon: ${subscription.id} (ends ${trialEnd?.toISOString()}, ${daysRemaining} days remaining)`,
   );
 
-  // TODO (Phase 5): Create notification for user
-  // await prisma.notification.create({
-  //   data: {
-  //     userId: dbSubscription.userId,
-  //     type: 'trial_ending',
-  //     title: 'Your trial is ending soon',
-  //     body: 'Your free trial ends in 3 days. Subscribe to keep access.',
-  //     link: '/subscriptions',
-  //   },
-  // });
+  const creatorName = dbSubscription.creator.displayName;
+  const creatorHandle = dbSubscription.creator.handle;
+
+  // Send in-app notification (fire and forget)
+  notifyTrialEnding(
+    dbSubscription.userId,
+    creatorName,
+    daysRemaining,
+    creatorHandle,
+  ).catch((error) =>
+    console.error("Error sending trial ending notification:", error),
+  );
+
+  // Send email notification (fire and forget)
+  sendTrialEndingEmail(
+    dbSubscription.userId,
+    creatorName,
+    daysRemaining,
+    `/subscriptions`,
+  ).catch((error) =>
+    console.error("Error sending trial ending email:", error),
+  );
 }
 
 /**
@@ -589,7 +636,7 @@ function getInvoiceSubscriptionId(invoice: Stripe.Invoice): string | null {
 
 /**
  * Handle invoice.payment_failed event
- * Sets subscription to past_due status
+ * Sets subscription to past_due status and notifies user.
  */
 async function handleInvoicePaymentFailed(
   invoice: Stripe.Invoice,
@@ -603,7 +650,14 @@ async function handleInvoicePaymentFailed(
 
   const dbSubscription = await prisma.subscription.findUnique({
     where: { stripeSubscriptionId: subscriptionId },
-    select: { id: true, userId: true, creatorId: true },
+    select: {
+      id: true,
+      userId: true,
+      creatorId: true,
+      creator: {
+        select: { displayName: true },
+      },
+    },
   });
 
   if (!dbSubscription) {
@@ -622,21 +676,27 @@ async function handleInvoicePaymentFailed(
     `Payment failed, subscription past_due: ${subscriptionId} (user ${dbSubscription.userId})`,
   );
 
-  // TODO (Phase 5): Create notification for user
-  // await prisma.notification.create({
-  //   data: {
-  //     userId: dbSubscription.userId,
-  //     type: 'payment_failed',
-  //     title: 'Payment failed',
-  //     body: 'We couldn\'t process your payment. Please update your payment method.',
-  //     link: '/subscriptions',
-  //   },
-  // });
+  const creatorName = dbSubscription.creator.displayName;
+
+  // Send in-app notification (fire and forget)
+  notifyPaymentFailed(dbSubscription.userId, creatorName).catch((error) =>
+    console.error("Error sending payment failed notification:", error),
+  );
+
+  // Send email notification (fire and forget)
+  sendPaymentFailedEmail(
+    dbSubscription.userId,
+    creatorName,
+    "/subscriptions",
+  ).catch((error) =>
+    console.error("Error sending payment failed email:", error),
+  );
 }
 
 /**
  * Handle invoice.paid event
- * Handles payment recovery from past_due status back to active.
+ * Handles payment recovery from past_due status back to active,
+ * and trial-to-active transitions.
  */
 async function handleInvoicePaid(invoice: Stripe.Invoice): Promise<void> {
   const subscriptionId = getInvoiceSubscriptionId(invoice);
@@ -648,7 +708,15 @@ async function handleInvoicePaid(invoice: Stripe.Invoice): Promise<void> {
 
   const dbSubscription = await prisma.subscription.findUnique({
     where: { stripeSubscriptionId: subscriptionId },
-    select: { id: true, status: true, userId: true },
+    select: {
+      id: true,
+      status: true,
+      userId: true,
+      priceAtPurchase: true,
+      creator: {
+        select: { displayName: true },
+      },
+    },
   });
 
   if (!dbSubscription) {
@@ -668,17 +736,6 @@ async function handleInvoicePaid(invoice: Stripe.Invoice): Promise<void> {
     console.log(
       `Payment recovered, subscription reactivated: ${subscriptionId} (user ${dbSubscription.userId})`,
     );
-
-    // TODO (Phase 5): Create notification for user
-    // await prisma.notification.create({
-    //   data: {
-    //     userId: dbSubscription.userId,
-    //     type: 'payment_recovered',
-    //     title: 'Payment successful',
-    //     body: 'Your subscription has been reactivated.',
-    //     link: '/subscriptions',
-    //   },
-    // });
   } else if (dbSubscription.status === "trialing") {
     // Handle transition from trialing to active when first invoice after trial is paid
     await prisma.subscription.update({
@@ -689,16 +746,14 @@ async function handleInvoicePaid(invoice: Stripe.Invoice): Promise<void> {
       `Subscription ${dbSubscription.id} transitioned from trialing to active (user ${dbSubscription.userId})`,
     );
 
-    // TODO (Phase 5): Create notification for user
-    // await prisma.notification.create({
-    //   data: {
-    //     userId: dbSubscription.userId,
-    //     type: 'trial_converted',
-    //     title: 'Welcome as a subscriber',
-    //     body: 'Your trial has ended and your subscription is now active.',
-    //     link: '/subscriptions',
-    //   },
-    // });
+    // Send subscription confirmation email for trial conversion (fire and forget)
+    sendSubscriptionConfirmationEmail(
+      dbSubscription.userId,
+      dbSubscription.creator.displayName,
+      dbSubscription.priceAtPurchase,
+    ).catch((error) =>
+      console.error("Error sending subscription confirmation email:", error),
+    );
   }
 }
 

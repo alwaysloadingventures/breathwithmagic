@@ -9,3 +9,17 @@ export {
   SubscriptionCardSkeleton,
 } from "./subscription-card";
 export type { SubscriptionCardProps } from "./subscription-card";
+
+// Payment recovery and warning banners
+export {
+  PaymentRecoveryBanner,
+  CompactPaymentBanner,
+  SubscriptionExpiryWarning,
+  TrialEndingBanner,
+} from "./payment-recovery-banner";
+export type {
+  PaymentRecoveryBannerProps,
+  CompactPaymentBannerProps,
+  SubscriptionExpiryWarningProps,
+  TrialEndingBannerProps,
+} from "./payment-recovery-banner";

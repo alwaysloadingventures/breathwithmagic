@@ -207,3 +207,21 @@ export const subscriptionRateLimiter = createRateLimiter({
   windowMs: 60 * 1000, // 1 minute
   maxRequests: 10,
 });
+
+/**
+ * Message send rate limiter
+ * PRD: 30 messages per hour for creators
+ */
+export const messageRateLimiter = createRateLimiter({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  maxRequests: 30,
+});
+
+/**
+ * Content report rate limiter
+ * PRD: 10 reports per hour per user
+ */
+export const reportRateLimiter = createRateLimiter({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  maxRequests: 10,
+});

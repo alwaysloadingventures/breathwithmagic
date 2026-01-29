@@ -13,6 +13,8 @@ import {
   canPublishContent,
 } from "@/lib/validations/content";
 import { sanitizeHtml } from "@/lib/sanitize";
+import { sendNewContentEmailsToSubscribers } from "@/lib/email";
+import { notifyNewContent } from "@/lib/notifications";
 
 type RouteParams = { params: Promise<{ id: string }> };
 
@@ -120,12 +122,12 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Get user and creator profile
+    // Get user and creator profile (include displayName for notifications)
     const user = await prisma.user.findUnique({
       where: { clerkId },
       include: {
         creatorProfile: {
-          select: { id: true },
+          select: { id: true, displayName: true },
         },
       },
     });
@@ -250,6 +252,10 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       }
     }
 
+    // Check if this is a new publish (for notification purposes)
+    const isNewPublish =
+      data.status === "published" && existingContent.status !== "published";
+
     // Update content
     const updatedContent = await prisma.content.update({
       where: { id },
@@ -263,6 +269,30 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         },
       },
     });
+
+    // Send notifications if newly published (fire and forget - don't block response)
+    if (isNewPublish) {
+      const creatorId = user.creatorProfile.id;
+      const creatorName = user.creatorProfile.displayName;
+      const contentTitle = updatedContent.title;
+      const contentId = updatedContent.id;
+
+      // Send in-app notifications
+      notifyNewContent(creatorId, creatorName, contentTitle, contentId).catch(
+        (error) =>
+          console.error("Error sending new content in-app notifications:", error),
+      );
+
+      // Send email notifications
+      sendNewContentEmailsToSubscribers(
+        creatorId,
+        creatorName,
+        contentTitle,
+        contentId,
+      ).catch((error) =>
+        console.error("Error sending new content email notifications:", error),
+      );
+    }
 
     return NextResponse.json({
       success: true,

@@ -111,67 +111,70 @@ export default async function FollowingPage() {
       <div className="min-h-screen bg-background">
         {/* Header */}
         <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-4">
-              <Link
-                href="/home"
-                className="text-muted-foreground hover:text-foreground transition-colors"
-                aria-label="Back to home"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  className="w-5 h-5"
-                  aria-hidden="true"
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center justify-between h-16">
+              <div className="flex items-center gap-4">
+                <Link
+                  href="/home"
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                  aria-label="Back to home"
                 >
-                  <path d="M19 12H5M12 19l-7-7 7-7" />
-                </svg>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="w-5 h-5"
+                    aria-hidden="true"
+                  >
+                    <path d="M19 12H5M12 19l-7-7 7-7" />
+                  </svg>
+                </Link>
+                <h1 className="text-lg font-semibold text-foreground">
+                  Following
+                </h1>
+              </div>
+              <Link href="/subscriptions">
+                <Button variant="outline" size="sm">
+                  My Subscriptions
+                </Button>
               </Link>
-              <h1 className="text-lg font-semibold text-foreground">
-                Following
-              </h1>
             </div>
-            <Link href="/subscriptions">
-              <Button variant="outline" size="sm">
-                My Subscriptions
-              </Button>
-            </Link>
           </div>
-        </div>
-      </header>
+        </header>
 
-      {/* Main Content */}
-      <main id="main-content" className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Info Banner */}
-        <div className="mb-8 p-4 rounded-lg bg-muted/50 border border-border flex items-start gap-3">
-          <Heart className="size-5 text-primary mt-0.5 flex-shrink-0" />
-          <div>
-            <p className="text-sm text-foreground font-medium">
-              Following vs. Subscribing
-            </p>
-            <p className="text-sm text-muted-foreground mt-1">
-              Following lets you see free content from creators. Subscribing
-              unlocks everything, including exclusive posts, videos, and direct
-              messaging.
-            </p>
+        {/* Main Content */}
+        <main
+          id="main-content"
+          className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8"
+        >
+          {/* Info Banner */}
+          <div className="mb-8 p-4 rounded-lg bg-muted/50 border border-border flex items-start gap-3">
+            <Heart className="size-5 text-primary mt-0.5 flex-shrink-0" />
+            <div>
+              <p className="text-sm text-foreground font-medium">
+                Following vs. Subscribing
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Following lets you see free content from creators. Subscribing
+                unlocks everything, including exclusive posts, videos, and
+                direct messaging.
+              </p>
+            </div>
           </div>
-        </div>
 
-        {totalFollows === 0 ? (
-          <EmptyState />
-        ) : (
-          <FollowingClient
-            initialFollows={formattedFollows}
-            totalCount={totalFollows}
-          />
-        )}
-      </main>
+          {totalFollows === 0 ? (
+            <EmptyState />
+          ) : (
+            <FollowingClient
+              initialFollows={formattedFollows}
+              totalCount={totalFollows}
+            />
+          )}
+        </main>
       </div>
     </>
   );

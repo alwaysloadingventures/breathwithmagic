@@ -64,6 +64,13 @@ const CATEGORY_LABELS: Record<string, string> = {
 
 /**
  * Generate metadata for SEO
+ *
+ * Provides rich metadata for creator profile pages including:
+ * - Dynamic title with creator name
+ * - Description from bio (truncated to 160 chars for SEO)
+ * - Open Graph tags for social sharing
+ * - Twitter card for X/Twitter sharing
+ * - Canonical URL
  */
 export async function generateMetadata({
   params,
@@ -79,32 +86,88 @@ export async function generateMetadata({
       displayName: true,
       bio: true,
       avatarUrl: true,
+      coverImageUrl: true,
       category: true,
     },
   });
 
   if (!creator) {
     return {
-      title: "Creator Not Found | breathwithmagic",
+      title: "Creator Not Found",
+      description: "This creator profile could not be found on breathwithmagic.",
+      robots: {
+        index: false,
+        follow: false,
+      },
     };
   }
 
+  // Create SEO-optimized description (max 160 chars)
+  const categoryLabel = CATEGORY_LABELS[creator.category];
+  const defaultDescription = `${creator.displayName} is a ${categoryLabel} creator on breathwithmagic. Subscribe for exclusive wellness content.`;
+  const bioDescription = creator.bio
+    ? creator.bio.length > 160
+      ? `${creator.bio.slice(0, 157)}...`
+      : creator.bio
+    : defaultDescription;
+
+  // Determine the best image for sharing
+  const ogImage = creator.coverImageUrl || creator.avatarUrl;
+
   return {
-    title: `${creator.displayName} | breathwithmagic`,
-    description:
-      creator.bio ??
-      `${creator.displayName} is a ${CATEGORY_LABELS[creator.category]} creator on breathwithmagic.`,
+    title: creator.displayName,
+    description: bioDescription,
+    keywords: [
+      creator.displayName,
+      categoryLabel.toLowerCase(),
+      "wellness",
+      "breathwithmagic",
+      "subscription",
+      "wellness creator",
+    ],
     openGraph: {
-      title: creator.displayName,
-      description:
-        creator.bio ?? `${CATEGORY_LABELS[creator.category]} creator`,
-      images: creator.avatarUrl ? [creator.avatarUrl] : [],
+      type: "profile",
+      title: `${creator.displayName} - ${categoryLabel} Creator`,
+      description: bioDescription,
+      url: `/${creatorHandle}`,
+      siteName: "breathwithmagic",
+      locale: "en_US",
+      images: ogImage
+        ? [
+            {
+              url: ogImage,
+              width: 1200,
+              height: 630,
+              alt: `${creator.displayName} - ${categoryLabel} creator on breathwithmagic`,
+            },
+          ]
+        : [
+            {
+              url: "/opengraph-image",
+              width: 1200,
+              height: 630,
+              alt: "breathwithmagic - Creator-First Wellness Platform",
+            },
+          ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${creator.displayName} - ${categoryLabel} Creator`,
+      description: bioDescription,
+      images: ogImage ? [ogImage] : ["/opengraph-image"],
+    },
+    alternates: {
+      canonical: `/${creatorHandle}`,
+    },
+    other: {
+      // Additional structured data hints
+      "og:profile:username": creatorHandle,
     },
   };
 }
 
 export default async function CreatorProfilePage(
-  props: CreatorProfilePageProps
+  props: CreatorProfilePageProps,
 ) {
   const { creatorHandle } = await props.params;
   const searchParams = await props.searchParams;
@@ -210,222 +273,224 @@ export default async function CreatorProfilePage(
       <main id="main-content" className="min-h-screen bg-background">
         {/* Cover Image */}
         <div className="relative h-48 md:h-64 lg:h-80 bg-muted overflow-hidden">
-        {creator.coverImageUrl ? (
-          <Image
-            src={creator.coverImageUrl}
-            alt={`${creator.displayName}'s cover`}
-            fill
-            className="object-cover"
-            priority
-            sizes="100vw"
-          />
-        ) : (
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-accent" />
-        )}
-        {/* Gradient overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
-      </div>
+          {creator.coverImageUrl ? (
+            <Image
+              src={creator.coverImageUrl}
+              alt={`${creator.displayName}'s cover`}
+              fill
+              className="object-cover"
+              priority
+              sizes="100vw"
+            />
+          ) : (
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-accent" />
+          )}
+          {/* Gradient overlay */}
+          <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
+        </div>
 
-      <div className="container mx-auto px-4">
-        {/* Profile Header */}
-        <div className="relative -mt-20 md:-mt-24 mb-8">
-          <div className="flex flex-col md:flex-row md:items-end gap-4 md:gap-6">
-            {/* Avatar */}
-            <Avatar className="size-32 md:size-40 border-4 border-background ring-4 ring-border shadow-lg">
-              {creator.avatarUrl ? (
-                <AvatarImage
-                  src={creator.avatarUrl}
-                  alt={creator.displayName}
+        <div className="container mx-auto px-4">
+          {/* Profile Header */}
+          <div className="relative -mt-20 md:-mt-24 mb-8">
+            <div className="flex flex-col md:flex-row md:items-end gap-4 md:gap-6">
+              {/* Avatar */}
+              <Avatar className="size-32 md:size-40 border-4 border-background ring-4 ring-border shadow-lg">
+                {creator.avatarUrl ? (
+                  <AvatarImage
+                    src={creator.avatarUrl}
+                    alt={creator.displayName}
+                  />
+                ) : null}
+                <AvatarFallback className="text-3xl md:text-4xl">
+                  {initials}
+                </AvatarFallback>
+              </Avatar>
+
+              {/* Name and Stats */}
+              <div className="flex-1 pb-2">
+                <div className="flex items-center gap-2 mb-1">
+                  <h1 className="text-2xl md:text-3xl font-semibold text-foreground">
+                    {creator.displayName}
+                  </h1>
+                  {creator.isVerified && (
+                    <>
+                      <CheckCircle2
+                        className="size-6 text-primary"
+                        aria-hidden="true"
+                      />
+                      <span className="sr-only">Verified Creator</span>
+                    </>
+                  )}
+                </div>
+                <p className="text-muted-foreground">@{creator.handle}</p>
+
+                {/* Stats Row */}
+                <div className="flex flex-wrap items-center gap-4 mt-3 text-sm text-muted-foreground">
+                  <Badge variant="secondary" className="font-normal">
+                    {CATEGORY_LABELS[creator.category]}
+                  </Badge>
+                  <span className="flex items-center gap-1">
+                    <Users className="size-4" />
+                    {formatCount(creator._count.subscriptions)} subscriber
+                    {creator._count.subscriptions !== 1 ? "s" : ""}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Heart className="size-4" />
+                    {formatCount(creator._count.followers)} follower
+                    {creator._count.followers !== 1 ? "s" : ""}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Video className="size-4" />
+                    {creator._count.content} post
+                    {creator._count.content !== 1 ? "s" : ""}
+                  </span>
+                  <span className="flex items-center gap-1">
+                    <Calendar className="size-4" />
+                    Joined{" "}
+                    {new Date(creator.createdAt).toLocaleDateString("en-US", {
+                      month: "short",
+                      year: "numeric",
+                    })}
+                  </span>
+                </div>
+              </div>
+
+              {/* Action Buttons - Desktop */}
+              <div className="hidden md:block">
+                <CreatorProfileActions
+                  creatorId={creator.id}
+                  creatorHandle={creator.handle}
+                  price={price.amount}
+                  trialEnabled={creator.trialEnabled}
+                  isAuthenticated={!!userId}
+                  isSubscribed={isSubscribed}
+                  isFollowing={isFollowing}
                 />
-              ) : null}
-              <AvatarFallback className="text-3xl md:text-4xl">
-                {initials}
-              </AvatarFallback>
-            </Avatar>
-
-            {/* Name and Stats */}
-            <div className="flex-1 pb-2">
-              <div className="flex items-center gap-2 mb-1">
-                <h1 className="text-2xl md:text-3xl font-semibold text-foreground">
-                  {creator.displayName}
-                </h1>
-                {creator.isVerified && (
-                  <>
-                    <CheckCircle2
-                      className="size-6 text-primary"
-                      aria-hidden="true"
-                    />
-                    <span className="sr-only">Verified Creator</span>
-                  </>
-                )}
-              </div>
-              <p className="text-muted-foreground">@{creator.handle}</p>
-
-              {/* Stats Row */}
-              <div className="flex flex-wrap items-center gap-4 mt-3 text-sm text-muted-foreground">
-                <Badge variant="secondary" className="font-normal">
-                  {CATEGORY_LABELS[creator.category]}
-                </Badge>
-                <span className="flex items-center gap-1">
-                  <Users className="size-4" />
-                  {formatCount(creator._count.subscriptions)} subscriber
-                  {creator._count.subscriptions !== 1 ? "s" : ""}
-                </span>
-                <span className="flex items-center gap-1">
-                  <Heart className="size-4" />
-                  {formatCount(creator._count.followers)} follower
-                  {creator._count.followers !== 1 ? "s" : ""}
-                </span>
-                <span className="flex items-center gap-1">
-                  <Video className="size-4" />
-                  {creator._count.content} post
-                  {creator._count.content !== 1 ? "s" : ""}
-                </span>
-                <span className="flex items-center gap-1">
-                  <Calendar className="size-4" />
-                  Joined{" "}
-                  {new Date(creator.createdAt).toLocaleDateString("en-US", {
-                    month: "short",
-                    year: "numeric",
-                  })}
-                </span>
               </div>
             </div>
-
-            {/* Action Buttons - Desktop */}
-            <div className="hidden md:block">
-              <CreatorProfileActions
-                creatorId={creator.id}
-                creatorHandle={creator.handle}
-                price={price.amount}
-                trialEnabled={creator.trialEnabled}
-                isAuthenticated={!!userId}
-                isSubscribed={isSubscribed}
-                isFollowing={isFollowing}
-              />
-            </div>
           </div>
-        </div>
 
-        {/* Mobile Action Buttons */}
-        <div className="md:hidden mb-6">
-          <CreatorProfileActions
-            creatorId={creator.id}
-            creatorHandle={creator.handle}
-            price={price.amount}
-            trialEnabled={creator.trialEnabled}
-            isAuthenticated={!!userId}
-            isSubscribed={isSubscribed}
-            isFollowing={isFollowing}
-          />
-        </div>
-
-        {/* Following vs Subscribing distinction */}
-        {!isSubscribed && (
-          <p className="text-sm text-muted-foreground mb-6 flex items-center gap-2">
-            <Heart className="size-4 text-primary/70" />
-            <span>
-              Following lets you see free content. Subscribing unlocks
-              everything.
-            </span>
-          </p>
-        )}
-
-        {/* Bio */}
-        {creator.bio && (
-          <div className="mb-8 max-w-2xl">
-            <p className="text-foreground whitespace-pre-wrap">{creator.bio}</p>
-          </div>
-        )}
-
-        {/* Welcome Banner - Shown after successful subscription */}
-        {justSubscribed && (
-          <div className="mb-8 p-6 rounded-xl bg-primary/10 border border-primary/30 max-w-lg">
-            <div className="flex items-center gap-3 mb-2">
-              <CheckCircle2 className="size-6 text-primary" />
-              <h3 className="font-semibold text-foreground">
-                Welcome to {creator.displayName}&apos;s community!
-              </h3>
-            </div>
-            <p className="text-muted-foreground mb-4">
-              You now have access to all exclusive content. Start your first
-              practice below.
-            </p>
-            {firstContent && (
-              <Link
-                href={`/${creator.handle}/post/${firstContent.id}`}
-                className={cn(buttonVariants(), "min-h-[44px]")}
-              >
-                Start your first practice
-              </Link>
-            )}
-          </div>
-        )}
-
-        {/* Subscription CTA Card */}
-        {!isSubscribed && (
-          <div className="mb-10 p-6 rounded-xl bg-muted/50 border border-border max-w-lg">
-            <h3 className="font-semibold text-foreground mb-2">
-              Subscribe for {price.amount}/month
-            </h3>
-            {creator.trialEnabled ? (
-              <p className="text-muted-foreground text-sm mb-4">
-                7 days free, then {price.amount}/month unless you cancel
-              </p>
-            ) : (
-              <p className="text-muted-foreground text-sm mb-4">
-                Get full access to all content
-              </p>
-            )}
-            <ul className="space-y-2 mb-4 text-sm">
-              <li className="flex items-center gap-2 text-muted-foreground">
-                <CheckCircle2 className="size-4 text-primary" />
-                Access to {creator._count.content} exclusive posts
-              </li>
-              {creator.dmEnabled && (
-                <li className="flex items-center gap-2 text-muted-foreground">
-                  <CheckCircle2 className="size-4 text-primary" />
-                  Direct messaging with {creator.displayName}
-                </li>
-              )}
-              <li className="flex items-center gap-2 text-muted-foreground">
-                <CheckCircle2 className="size-4 text-primary" />
-                <Link
-                  href="/subscriptions"
-                  className="hover:underline hover:text-foreground transition-colors"
-                >
-                  Cancel anytime
-                </Link>
-              </li>
-            </ul>
-            <Link
-              href={
-                userId
-                  ? `/api/creators/${creator.id}/subscribe`
-                  : `/sign-up?redirect_url=/${creator.handle}`
-              }
-              className={cn(buttonVariants(), "w-full min-h-[44px]")}
-            >
-              {creator.trialEnabled
-                ? "Start free trial"
-                : `Subscribe for ${price.amount}/month`}
-            </Link>
-          </div>
-        )}
-
-        {/* Content Section */}
-        <section className="pb-16">
-          <h2 className="text-xl font-semibold text-foreground mb-6">
-            Content
-          </h2>
-          <Suspense fallback={<CreatorContentFeedSkeleton />}>
-            <ContentGridWithPagination
+          {/* Mobile Action Buttons */}
+          <div className="md:hidden mb-6">
+            <CreatorProfileActions
               creatorId={creator.id}
               creatorHandle={creator.handle}
-              hasAccess={isSubscribed}
+              price={price.amount}
+              trialEnabled={creator.trialEnabled}
+              isAuthenticated={!!userId}
+              isSubscribed={isSubscribed}
+              isFollowing={isFollowing}
             />
-          </Suspense>
-        </section>
+          </div>
+
+          {/* Following vs Subscribing distinction */}
+          {!isSubscribed && (
+            <p className="text-sm text-muted-foreground mb-6 flex items-center gap-2">
+              <Heart className="size-4 text-primary/70" />
+              <span>
+                Following lets you see free content. Subscribing unlocks
+                everything.
+              </span>
+            </p>
+          )}
+
+          {/* Bio */}
+          {creator.bio && (
+            <div className="mb-8 max-w-2xl">
+              <p className="text-foreground whitespace-pre-wrap">
+                {creator.bio}
+              </p>
+            </div>
+          )}
+
+          {/* Welcome Banner - Shown after successful subscription */}
+          {justSubscribed && (
+            <div className="mb-8 p-6 rounded-xl bg-primary/10 border border-primary/30 max-w-lg">
+              <div className="flex items-center gap-3 mb-2">
+                <CheckCircle2 className="size-6 text-primary" />
+                <h3 className="font-semibold text-foreground">
+                  Welcome to {creator.displayName}&apos;s community!
+                </h3>
+              </div>
+              <p className="text-muted-foreground mb-4">
+                You now have access to all exclusive content. Start your first
+                practice below.
+              </p>
+              {firstContent && (
+                <Link
+                  href={`/${creator.handle}/post/${firstContent.id}`}
+                  className={cn(buttonVariants(), "min-h-[44px]")}
+                >
+                  Start your first practice
+                </Link>
+              )}
+            </div>
+          )}
+
+          {/* Subscription CTA Card */}
+          {!isSubscribed && (
+            <div className="mb-10 p-6 rounded-xl bg-muted/50 border border-border max-w-lg">
+              <h3 className="font-semibold text-foreground mb-2">
+                Subscribe for {price.amount}/month
+              </h3>
+              {creator.trialEnabled ? (
+                <p className="text-muted-foreground text-sm mb-4">
+                  7 days free, then {price.amount}/month unless you cancel
+                </p>
+              ) : (
+                <p className="text-muted-foreground text-sm mb-4">
+                  Get full access to all content
+                </p>
+              )}
+              <ul className="space-y-2 mb-4 text-sm">
+                <li className="flex items-center gap-2 text-muted-foreground">
+                  <CheckCircle2 className="size-4 text-primary" />
+                  Access to {creator._count.content} exclusive posts
+                </li>
+                {creator.dmEnabled && (
+                  <li className="flex items-center gap-2 text-muted-foreground">
+                    <CheckCircle2 className="size-4 text-primary" />
+                    Direct messaging with {creator.displayName}
+                  </li>
+                )}
+                <li className="flex items-center gap-2 text-muted-foreground">
+                  <CheckCircle2 className="size-4 text-primary" />
+                  <Link
+                    href="/subscriptions"
+                    className="hover:underline hover:text-foreground transition-colors"
+                  >
+                    Cancel anytime
+                  </Link>
+                </li>
+              </ul>
+              <Link
+                href={
+                  userId
+                    ? `/api/creators/${creator.id}/subscribe`
+                    : `/sign-up?redirect_url=/${creator.handle}`
+                }
+                className={cn(buttonVariants(), "w-full min-h-[44px]")}
+              >
+                {creator.trialEnabled
+                  ? "Start free trial"
+                  : `Subscribe for ${price.amount}/month`}
+              </Link>
+            </div>
+          )}
+
+          {/* Content Section */}
+          <section className="pb-16">
+            <h2 className="text-xl font-semibold text-foreground mb-6">
+              Content
+            </h2>
+            <Suspense fallback={<CreatorContentFeedSkeleton />}>
+              <ContentGridWithPagination
+                creatorId={creator.id}
+                creatorHandle={creator.handle}
+                hasAccess={isSubscribed}
+              />
+            </Suspense>
+          </section>
         </div>
       </main>
     </>

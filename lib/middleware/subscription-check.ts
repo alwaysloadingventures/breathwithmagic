@@ -205,11 +205,7 @@ export async function checkSubscriptionStatus(
     let hasAccess = cached.isActive;
 
     // If it was cached as active, double-check canceled subscriptions haven't expired
-    if (
-      cached.isActive &&
-      cached.status === "canceled" &&
-      cached.expiresAt
-    ) {
+    if (cached.isActive && cached.status === "canceled" && cached.expiresAt) {
       const expiresAt = new Date(cached.expiresAt);
       const now = new Date();
       hasAccess = expiresAt > now;
@@ -518,6 +514,58 @@ function statusToReason(status: string | null): AccessReason {
       return "subscription_past_due";
     default:
       return "no_subscription";
+  }
+}
+
+/**
+ * Check if a subscription has expired based on its period end date
+ * Used for determining if a canceled subscription still has access
+ */
+export function isSubscriptionExpired(
+  status: string | null,
+  currentPeriodEnd: Date | null,
+): boolean {
+  if (!status) return true;
+
+  // Active and trialing subscriptions are not expired
+  if (status === "active" || status === "trialing") {
+    return false;
+  }
+
+  // Past due subscriptions are not technically expired, but payment failed
+  if (status === "past_due") {
+    return false;
+  }
+
+  // Canceled subscriptions are expired only if past their period end
+  if (status === "canceled") {
+    if (!currentPeriodEnd) return true;
+    return new Date() > currentPeriodEnd;
+  }
+
+  // Unknown status is treated as expired (fail-closed)
+  return true;
+}
+
+/**
+ * Get user-friendly message for access denial reason
+ */
+export function getAccessDenialMessage(reason: AccessReason): string {
+  switch (reason) {
+    case "no_subscription":
+      return "Subscribe to access this content";
+    case "subscription_expired":
+      return "Your subscription has expired. Renew to regain access.";
+    case "subscription_canceled":
+      return "Your subscription has ended. Subscribe again to access this content.";
+    case "subscription_past_due":
+      return "There was an issue with your payment. Please update your payment method.";
+    case "content_not_found":
+      return "This content is no longer available.";
+    case "unauthenticated":
+      return "Please sign in to access this content.";
+    default:
+      return "You don't have access to this content.";
   }
 }
 

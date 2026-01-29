@@ -80,6 +80,13 @@ function formatDuration(seconds: number): string {
 
 /**
  * Generate metadata for SEO
+ *
+ * Provides rich metadata for content pages including:
+ * - Dynamic title with content and creator name
+ * - Description from content (truncated to 160 chars for SEO)
+ * - Open Graph tags with video/audio specific metadata
+ * - Twitter card for X/Twitter sharing
+ * - Canonical URL
  */
 export async function generateMetadata({
   params,
@@ -92,10 +99,16 @@ export async function generateMetadata({
       title: true,
       description: true,
       thumbnailUrl: true,
+      type: true,
+      duration: true,
+      isFree: true,
+      publishedAt: true,
       creator: {
         select: {
           displayName: true,
           handle: true,
+          avatarUrl: true,
+          category: true,
         },
       },
     },
@@ -103,19 +116,125 @@ export async function generateMetadata({
 
   if (!content || content.creator.handle !== creatorHandle) {
     return {
-      title: "Content Not Found | breathwithmagic",
+      title: "Content Not Found",
+      description: "This content could not be found on breathwithmagic.",
+      robots: {
+        index: false,
+        follow: false,
+      },
     };
   }
 
+  // Create SEO-optimized description (max 160 chars)
+  const categoryLabel = CATEGORY_LABELS[content.creator.category];
+  const defaultDescription = `${content.title} - A ${content.type} by ${content.creator.displayName} on breathwithmagic. ${categoryLabel} content for your wellness practice.`;
+  const contentDescription = content.description
+    ? content.description.length > 160
+      ? `${content.description.slice(0, 157)}...`
+      : content.description
+    : defaultDescription;
+
+  // Determine the best image for sharing
+  const ogImage = content.thumbnailUrl || content.creator.avatarUrl;
+
+  // Base Open Graph configuration
+  const openGraphBase = {
+    title: content.title,
+    description: contentDescription,
+    url: `/${creatorHandle}/post/${id}`,
+    siteName: "breathwithmagic",
+    locale: "en_US",
+    images: ogImage
+      ? [
+          {
+            url: ogImage,
+            width: 1200,
+            height: 630,
+            alt: `${content.title} by ${content.creator.displayName}`,
+          },
+        ]
+      : [
+          {
+            url: "/opengraph-image",
+            width: 1200,
+            height: 630,
+            alt: "breathwithmagic - Creator-First Wellness Platform",
+          },
+        ],
+  };
+
+  // Build type-specific Open Graph metadata
+  let openGraph: Metadata["openGraph"];
+
+  if (content.type === "video") {
+    openGraph = {
+      ...openGraphBase,
+      type: "video.other",
+      videos: content.thumbnailUrl
+        ? [
+            {
+              url: content.thumbnailUrl,
+              width: 1280,
+              height: 720,
+            },
+          ]
+        : undefined,
+    };
+  } else if (content.type === "audio") {
+    openGraph = {
+      ...openGraphBase,
+      type: "music.song",
+      audio: content.thumbnailUrl
+        ? [
+            {
+              url: content.thumbnailUrl,
+            },
+          ]
+        : undefined,
+    };
+  } else {
+    openGraph = {
+      ...openGraphBase,
+      type: "article",
+      publishedTime: content.publishedAt?.toISOString(),
+      authors: [content.creator.displayName],
+      tags: [categoryLabel, "wellness", "breathwithmagic"],
+    };
+  }
+
+  // Determine Twitter card type based on content type
+  const twitterCard =
+    content.type === "video" ? "player" : "summary_large_image";
+
   return {
-    title: `${content.title} by ${content.creator.displayName} | breathwithmagic`,
-    description:
-      content.description ||
-      `Watch ${content.title} by ${content.creator.displayName} on breathwithmagic.`,
-    openGraph: {
-      title: content.title,
-      description: content.description || `By ${content.creator.displayName}`,
-      images: content.thumbnailUrl ? [content.thumbnailUrl] : [],
+    title: `${content.title} by ${content.creator.displayName}`,
+    description: contentDescription,
+    keywords: [
+      content.title,
+      content.creator.displayName,
+      categoryLabel.toLowerCase(),
+      content.type,
+      "wellness",
+      "breathwithmagic",
+    ],
+    openGraph,
+    twitter: {
+      card: twitterCard,
+      title: `${content.title} by ${content.creator.displayName}`,
+      description: contentDescription,
+      images: ogImage ? [ogImage] : ["/opengraph-image"],
+      creator: "@breathwithmagic",
+    },
+    alternates: {
+      canonical: `/${creatorHandle}/post/${id}`,
+    },
+    other: {
+      // Additional structured data hints
+      ...(content.duration && {
+        "video:duration": String(content.duration),
+      }),
+      "article:author": content.creator.displayName,
+      "article:section": categoryLabel,
     },
   };
 }

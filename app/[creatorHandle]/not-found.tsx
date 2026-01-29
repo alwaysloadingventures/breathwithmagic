@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Home, Search, UserX } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/lib/button-variants";
 import {
   Card,
   CardContent,
