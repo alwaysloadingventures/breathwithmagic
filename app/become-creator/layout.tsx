@@ -30,7 +30,7 @@ export default function BecomeCreatorLayout({
             breathwithmagic
           </Link>
           <Link
-            href="/home"
+            href="/explore"
             className="text-sm text-muted-foreground transition-colors hover:text-foreground"
           >
             Exit

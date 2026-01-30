@@ -1,10 +1,10 @@
 import { Metadata } from "next";
-import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Heart, Search } from "lucide-react";
 
 import { prisma } from "@/lib/prisma";
+import { ensureUser } from "@/lib/ensure-user";
 import { Button } from "@/components/ui/button";
 import { SkipLink } from "@/components/ui/skip-link";
 import { FollowingClient } from "./following-client";
@@ -21,21 +21,12 @@ export const metadata: Metadata = {
  * between following (free content access) and subscribing (full access).
  */
 export default async function FollowingPage() {
-  const user = await currentUser();
-
-  if (!user) {
+  // Ensure user exists in database (auto-creates if not)
+  const userResult = await ensureUser();
+  if (!userResult) {
     redirect("/sign-in?redirect_url=/following");
   }
-
-  // Get the user from our database
-  const dbUser = await prisma.user.findUnique({
-    where: { clerkId: user.id },
-    select: { id: true },
-  });
-
-  if (!dbUser) {
-    redirect("/sign-in");
-  }
+  const dbUser = userResult.user;
 
   // Fetch initial follows with creator info
   const follows = await prisma.follow.findMany({

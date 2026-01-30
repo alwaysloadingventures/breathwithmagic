@@ -142,10 +142,17 @@ export async function GET(
 
     // Price tier mapping
     const PRICE_DISPLAY: Record<string, { amount: string; cents: number }> = {
+      TIER_FREE: { amount: "Free", cents: 0 },
       TIER_500: { amount: "$5", cents: 500 },
       TIER_1000: { amount: "$10", cents: 1000 },
+      TIER_1500: { amount: "$15", cents: 1500 },
       TIER_2000: { amount: "$20", cents: 2000 },
+      TIER_2500: { amount: "$25", cents: 2500 },
       TIER_3000: { amount: "$30", cents: 3000 },
+      TIER_4000: { amount: "$40", cents: 4000 },
+      TIER_5000: { amount: "$50", cents: 5000 },
+      TIER_7500: { amount: "$75", cents: 7500 },
+      TIER_9900: { amount: "$99", cents: 9900 },
     };
 
     const price = PRICE_DISPLAY[content.creator.subscriptionPrice];

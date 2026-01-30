@@ -16,10 +16,17 @@ import { Card, CardContent } from "@/components/ui/card";
  * Maps subscription price tiers to display values
  */
 const PRICE_DISPLAY: Record<SubscriptionPriceTier, string> = {
+  TIER_FREE: "Free",
   TIER_500: "$5",
   TIER_1000: "$10",
+  TIER_1500: "$15",
   TIER_2000: "$20",
+  TIER_2500: "$25",
   TIER_3000: "$30",
+  TIER_4000: "$40",
+  TIER_5000: "$50",
+  TIER_7500: "$75",
+  TIER_9900: "$99",
 };
 
 /**

@@ -12,6 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/lib/button-variants";
 import { SkipLink } from "@/components/ui/skip-link";
+import { SmartHeader } from "@/components/layout";
 import { CreatorProfileActions } from "./creator-profile-actions";
 import {
   CreatorContentFeed,
@@ -40,10 +41,17 @@ interface CreatorProfilePageProps {
  * Price tier display values
  */
 const PRICE_DISPLAY: Record<string, { amount: string; cents: number }> = {
+  TIER_FREE: { amount: "Free", cents: 0 },
   TIER_500: { amount: "$5", cents: 500 },
   TIER_1000: { amount: "$10", cents: 1000 },
+  TIER_1500: { amount: "$15", cents: 1500 },
   TIER_2000: { amount: "$20", cents: 2000 },
+  TIER_2500: { amount: "$25", cents: 2500 },
   TIER_3000: { amount: "$30", cents: 3000 },
+  TIER_4000: { amount: "$40", cents: 4000 },
+  TIER_5000: { amount: "$50", cents: 5000 },
+  TIER_7500: { amount: "$75", cents: 7500 },
+  TIER_9900: { amount: "$99", cents: 9900 },
 };
 
 /**
@@ -270,6 +278,7 @@ export default async function CreatorProfilePage(
   return (
     <>
       <SkipLink />
+      <SmartHeader />
       <main id="main-content" className="min-h-screen bg-background">
         {/* Cover Image */}
         <div className="relative h-48 md:h-64 lg:h-80 bg-muted overflow-hidden">

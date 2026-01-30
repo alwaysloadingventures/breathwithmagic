@@ -30,6 +30,7 @@ import {
   PRICE_TIER_TO_CENTS,
 } from "@/lib/stripe";
 import { subscriptionRateLimiter } from "@/lib/rate-limit";
+import { ensureUser } from "@/lib/ensure-user";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -43,17 +44,18 @@ export async function POST(
     // Get creator ID from route params
     const { id: creatorId } = await context.params;
 
-    // Verify authentication
-    const { userId: clerkId } = await auth();
-    if (!clerkId) {
+    // Verify authentication and ensure user exists
+    const userResult = await ensureUser();
+    if (!userResult) {
       return NextResponse.json(
         { error: "Please sign in to subscribe", code: "UNAUTHORIZED" },
         { status: 401 },
       );
     }
 
-    // Rate limit check
-    const rateLimitResult = subscriptionRateLimiter.check(clerkId);
+    // Rate limit check (use clerkId for rate limiting)
+    const { userId: clerkId } = await auth();
+    const rateLimitResult = subscriptionRateLimiter.check(clerkId || userResult.user.clerkId);
     if (!rateLimitResult.allowed) {
       return NextResponse.json(
         {
@@ -70,9 +72,9 @@ export async function POST(
       );
     }
 
-    // Get the current user
+    // Get the full user with stripeCustomerId
     const user = await prisma.user.findUnique({
-      where: { clerkId },
+      where: { id: userResult.user.id },
       select: {
         id: true,
         email: true,

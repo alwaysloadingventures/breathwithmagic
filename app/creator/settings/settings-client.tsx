@@ -127,10 +127,17 @@ export function SettingsClient({ initialSettings }: SettingsClientProps) {
 
   // Price tier options
   const priceTiers: { value: SubscriptionPriceTier; label: string }[] = [
+    { value: "TIER_FREE", label: "Free" },
     { value: "TIER_500", label: "$5/month" },
     { value: "TIER_1000", label: "$10/month" },
+    { value: "TIER_1500", label: "$15/month" },
     { value: "TIER_2000", label: "$20/month" },
+    { value: "TIER_2500", label: "$25/month" },
     { value: "TIER_3000", label: "$30/month" },
+    { value: "TIER_4000", label: "$40/month" },
+    { value: "TIER_5000", label: "$50/month" },
+    { value: "TIER_7500", label: "$75/month" },
+    { value: "TIER_9900", label: "$99/month" },
   ];
 
   return (

@@ -13,6 +13,7 @@ export default defineConfig({
   schema: "prisma/schema.prisma",
   migrations: {
     path: "prisma/migrations",
+    seed: "tsx prisma/seed.ts",
   },
   datasource: {
     // For Neon, use the direct URL for migrations to bypass connection pooling

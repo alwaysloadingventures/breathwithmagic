@@ -5,24 +5,24 @@
  * Creates or updates a partial CreatorProfile in pending_setup status
  */
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
+import { ensureUser } from "@/lib/ensure-user";
 import { creatorOnboardingSchema } from "@/lib/validations/creator";
 
 export async function POST(request: NextRequest) {
   try {
-    // Verify authentication
-    const { userId: clerkId } = await auth();
-    if (!clerkId) {
+    // Verify authentication and ensure user exists in database
+    const userResult = await ensureUser();
+    if (!userResult) {
       return NextResponse.json(
         { error: "Unauthorized", code: "UNAUTHORIZED" },
         { status: 401 },
       );
     }
 
-    // Get or create user record
+    // Get user with creator profile
     const user = await prisma.user.findUnique({
-      where: { clerkId },
+      where: { id: userResult.user.id },
       include: { creatorProfile: true },
     });
 
@@ -142,8 +142,9 @@ export async function POST(request: NextRequest) {
  */
 export async function GET() {
   try {
-    const { userId: clerkId } = await auth();
-    if (!clerkId) {
+    // Verify authentication and ensure user exists in database
+    const userResult = await ensureUser();
+    if (!userResult) {
       return NextResponse.json(
         { error: "Unauthorized", code: "UNAUTHORIZED" },
         { status: 401 },
@@ -151,7 +152,7 @@ export async function GET() {
     }
 
     const user = await prisma.user.findUnique({
-      where: { clerkId },
+      where: { id: userResult.user.id },
       include: {
         creatorProfile: {
           select: {

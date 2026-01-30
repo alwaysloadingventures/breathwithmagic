@@ -1,6 +1,8 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
+import { auth } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
 
 import { prisma } from "@/lib/prisma";
 import { getCache, setCache } from "@/lib/cache";
@@ -14,6 +16,7 @@ import {
   CreatorCardSkeleton,
 } from "@/components/browse";
 import { SkipLink } from "@/components/ui/skip-link";
+import { PublicHeader } from "@/components/layout";
 
 /**
  * Homepage - Public landing page
@@ -28,10 +31,17 @@ import { SkipLink } from "@/components/ui/skip-link";
  */
 export const revalidate = 300; // 5 minutes
 
-export default function HomePage() {
+export default async function HomePage() {
+  // Check if user is authenticated - redirect to /home if so
+  const { userId } = await auth();
+  if (userId) {
+    redirect("/home");
+  }
+
   return (
     <>
       <SkipLink />
+      <PublicHeader />
       <main id="main-content" className="min-h-screen bg-background">
         {/* Hero Section */}
         <HeroSection />

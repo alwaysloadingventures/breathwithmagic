@@ -9,14 +9,14 @@
  * user role to 'creator'.
  */
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
+import { ensureUser } from "@/lib/ensure-user";
 
 export async function POST() {
   try {
-    // Verify authentication
-    const { userId: clerkId } = await auth();
-    if (!clerkId) {
+    // Verify authentication and ensure user exists in database
+    const userResult = await ensureUser();
+    if (!userResult) {
       return NextResponse.json(
         { error: "Unauthorized", code: "UNAUTHORIZED" },
         { status: 401 },
@@ -25,7 +25,7 @@ export async function POST() {
 
     // Get user with creator profile
     const user = await prisma.user.findUnique({
-      where: { clerkId },
+      where: { id: userResult.user.id },
       include: { creatorProfile: true },
     });
 

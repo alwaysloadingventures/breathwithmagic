@@ -1,16 +1,37 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
-// Define public routes that don't require authentication
-const isPublicRoute = createRouteMatcher([
-  "/",
-  "/sign-in(.*)",
-  "/sign-up(.*)",
-  "/api/webhooks(.*)",
+/**
+ * Define protected routes that REQUIRE authentication
+ *
+ * We use an allowlist of protected routes rather than public routes because:
+ * - Creator profiles use dynamic routes at /{handle} (e.g., /sarahbreath)
+ * - These should be publicly accessible for discovery
+ * - It's easier to list the known protected routes
+ */
+const isProtectedRoute = createRouteMatcher([
+  // Authenticated user pages
+  "/home(.*)",
+  "/following(.*)",
+  "/subscriptions(.*)",
+  "/settings(.*)",
+  "/messages(.*)",
+  "/notifications(.*)",
+  // Creator dashboard
+  "/creator(.*)",
+  // Protected API routes (not webhooks)
+  "/api/creator(.*)",
+  "/api/subscriptions(.*)",
+  "/api/follow(.*)",
+  "/api/user(.*)",
+  "/api/messages(.*)",
+  "/api/notifications(.*)",
+  "/api/content(.*)",
+  "/api/admin(.*)",
 ]);
 
 export default clerkMiddleware(async (auth, request) => {
-  // Protect all routes except public ones
-  if (!isPublicRoute(request)) {
+  // Only protect explicitly listed routes
+  if (isProtectedRoute(request)) {
     await auth.protect();
   }
 });

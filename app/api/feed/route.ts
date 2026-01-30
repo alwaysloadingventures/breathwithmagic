@@ -13,6 +13,7 @@ import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { feedQuerySchema } from "@/lib/validations/feed";
 import { apiRateLimiter } from "@/lib/rate-limit";
+import { ensureUser } from "@/lib/ensure-user";
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
   try {
@@ -46,18 +47,15 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    // Get the user
-    const user = await prisma.user.findUnique({
-      where: { clerkId },
-      select: { id: true },
-    });
-
-    if (!user) {
+    // Get or create the user (auto-sync from Clerk)
+    const userResult = await ensureUser();
+    if (!userResult) {
       return NextResponse.json(
-        { error: "User not found", code: "USER_NOT_FOUND" },
-        { status: 404 },
+        { error: "Unable to sync user", code: "USER_SYNC_FAILED" },
+        { status: 500 },
       );
     }
+    const user = userResult.user;
 
     // Parse query parameters
     const searchParams = request.nextUrl.searchParams;

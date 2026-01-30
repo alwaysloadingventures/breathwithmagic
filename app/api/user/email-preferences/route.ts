@@ -9,10 +9,10 @@
  * - Preferences stored in database
  */
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod/v4";
 import { apiRateLimiter } from "@/lib/rate-limit";
+import { ensureUser } from "@/lib/ensure-user";
 
 /**
  * Validation schema for updating email preferences
@@ -33,18 +33,19 @@ const updatePreferencesSchema = z.object({
  */
 export async function GET() {
   try {
-    // Verify authentication
-    const { userId: clerkId } = await auth();
-    if (!clerkId) {
+    // Verify authentication and ensure user exists
+    const userResult = await ensureUser();
+    if (!userResult) {
       return NextResponse.json(
         { error: "Unauthorized", code: "UNAUTHORIZED" },
         { status: 401 },
       );
     }
+    const user = userResult.user;
 
     // Rate limiting
     const { allowed, remaining, retryAfterSeconds } =
-      await apiRateLimiter.checkAsync(clerkId);
+      await apiRateLimiter.checkAsync(user.clerkId);
     if (!allowed) {
       return NextResponse.json(
         { error: "Rate limit exceeded", code: "RATE_LIMIT_EXCEEDED" },
@@ -56,19 +57,6 @@ export async function GET() {
             "X-RateLimit-Remaining": String(remaining),
           },
         },
-      );
-    }
-
-    // Get user
-    const user = await prisma.user.findUnique({
-      where: { clerkId },
-      select: { id: true },
-    });
-
-    if (!user) {
-      return NextResponse.json(
-        { error: "User not found", code: "USER_NOT_FOUND" },
-        { status: 404 },
       );
     }
 
@@ -110,18 +98,19 @@ export async function GET() {
  */
 export async function PATCH(request: NextRequest) {
   try {
-    // Verify authentication
-    const { userId: clerkId } = await auth();
-    if (!clerkId) {
+    // Verify authentication and ensure user exists
+    const userResult = await ensureUser();
+    if (!userResult) {
       return NextResponse.json(
         { error: "Unauthorized", code: "UNAUTHORIZED" },
         { status: 401 },
       );
     }
+    const user = userResult.user;
 
     // Rate limiting
     const { allowed, remaining, retryAfterSeconds } =
-      await apiRateLimiter.checkAsync(clerkId);
+      await apiRateLimiter.checkAsync(user.clerkId);
     if (!allowed) {
       return NextResponse.json(
         { error: "Rate limit exceeded", code: "RATE_LIMIT_EXCEEDED" },
@@ -133,19 +122,6 @@ export async function PATCH(request: NextRequest) {
             "X-RateLimit-Remaining": String(remaining),
           },
         },
-      );
-    }
-
-    // Get user
-    const user = await prisma.user.findUnique({
-      where: { clerkId },
-      select: { id: true },
-    });
-
-    if (!user) {
-      return NextResponse.json(
-        { error: "User not found", code: "USER_NOT_FOUND" },
-        { status: 404 },
       );
     }
 

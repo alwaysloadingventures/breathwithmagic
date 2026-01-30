@@ -1,6 +1,5 @@
 import { Suspense } from "react";
 import { UserButton } from "@clerk/nextjs";
-import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Compass, Settings, Heart, Users, Mail, Home } from "lucide-react";
@@ -12,6 +11,7 @@ import { SkipLink } from "@/components/ui/skip-link";
 import { NotificationBell } from "@/components/notifications";
 import { PaymentRecoveryBanner } from "@/components/subscription/payment-recovery-banner";
 import { prisma } from "@/lib/prisma";
+import { ensureUser } from "@/lib/ensure-user";
 import { HomeFeed } from "./home-feed";
 
 /**
@@ -26,22 +26,18 @@ import { HomeFeed } from "./home-feed";
  */
 
 export default async function HomePage() {
-  const user = await currentUser();
-
-  if (!user) {
+  // Ensure user exists in database (auto-creates if not)
+  const userResult = await ensureUser();
+  if (!userResult) {
     redirect("/sign-in");
   }
+  const dbUser = userResult.user;
 
   // Check for past_due subscriptions to show payment recovery banner
-  const dbUser = await prisma.user.findUnique({
-    where: { clerkId: user.id },
-    select: { id: true },
-  });
-
   let hasPastDueSubscription = false;
   let pastDueCreatorName: string | undefined;
 
-  if (dbUser) {
+  {
     const pastDueSubscription = await prisma.subscription.findFirst({
       where: {
         userId: dbUser.id,
@@ -191,7 +187,7 @@ export default async function HomePage() {
           {/* Welcome Section */}
           <div className="mb-8">
             <h1 className="text-2xl font-semibold text-foreground mb-1">
-              Welcome back, {user.firstName || "there"}
+              Welcome back, {dbUser.name?.split(" ")[0] || "there"}
             </h1>
             <p className="text-muted-foreground">
               Here&apos;s the latest from creators you follow and subscribe to

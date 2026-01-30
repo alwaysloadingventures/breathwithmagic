@@ -40,10 +40,17 @@ export const creatorCategorySchema = z.enum([
 
 // Subscription price tiers matching Prisma enum
 export const subscriptionPriceTierSchema = z.enum([
+  "TIER_FREE",
   "TIER_500",
   "TIER_1000",
+  "TIER_1500",
   "TIER_2000",
+  "TIER_2500",
   "TIER_3000",
+  "TIER_4000",
+  "TIER_5000",
+  "TIER_7500",
+  "TIER_9900",
 ]);
 
 // Step 1: Handle Selection
@@ -102,10 +109,17 @@ export type SubscriptionPriceTier = z.infer<typeof subscriptionPriceTierSchema>;
 
 // Helper to get price display from tier
 export const priceTierToAmount: Record<SubscriptionPriceTier, number> = {
+  TIER_FREE: 0,
   TIER_500: 5,
   TIER_1000: 10,
+  TIER_1500: 15,
   TIER_2000: 20,
+  TIER_2500: 25,
   TIER_3000: 30,
+  TIER_4000: 40,
+  TIER_5000: 50,
+  TIER_7500: 75,
+  TIER_9900: 99,
 };
 
 // Category display names and descriptions

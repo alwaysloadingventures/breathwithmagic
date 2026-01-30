@@ -9,21 +9,21 @@
  * - Clear descriptions of what each email type means
  * - Save button with confirmation
  */
-import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { ensureUser } from "@/lib/ensure-user";
 import { EmailPreferencesClient } from "./email-preferences-client";
 
 export default async function EmailPreferencesPage() {
-  const { userId: clerkId } = await auth();
-
-  if (!clerkId) {
+  // Ensure user exists in database (auto-creates if not)
+  const userResult = await ensureUser();
+  if (!userResult) {
     redirect("/sign-in");
   }
 
-  // Get user and their email preferences
+  // Get user with their email preferences
   const user = await prisma.user.findUnique({
-    where: { clerkId },
+    where: { id: userResult.user.id },
     include: {
       emailPreferences: true,
     },

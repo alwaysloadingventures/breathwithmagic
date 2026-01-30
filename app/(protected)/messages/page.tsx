@@ -1,10 +1,10 @@
 import { Metadata } from "next";
-import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Mail } from "lucide-react";
 
 import { prisma } from "@/lib/prisma";
+import { ensureUser } from "@/lib/ensure-user";
 import { Button } from "@/components/ui/button";
 import { SkipLink } from "@/components/ui/skip-link";
 import { MessagesInboxClient } from "./messages-inbox-client";
@@ -23,21 +23,12 @@ export const metadata: Metadata = {
  * - Unread indicator
  */
 export default async function MessagesPage() {
-  const user = await currentUser();
-
-  if (!user) {
+  // Ensure user exists in database (auto-creates if not)
+  const userResult = await ensureUser();
+  if (!userResult) {
     redirect("/sign-in?redirect_url=/messages");
   }
-
-  // Get the user from our database
-  const dbUser = await prisma.user.findUnique({
-    where: { clerkId: user.id },
-    select: { id: true },
-  });
-
-  if (!dbUser) {
-    redirect("/sign-in");
-  }
+  const dbUser = userResult.user;
 
   const limit = 20;
 

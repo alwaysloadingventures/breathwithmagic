@@ -60,8 +60,9 @@ const initialState: OnboardingState = {
 
 /**
  * localStorage key for persisting onboarding draft
+ * Made user-specific to prevent state bleeding between users
  */
-const STORAGE_KEY = "creator-onboarding-draft";
+const getStorageKey = (userId: string) => `creator-onboarding-draft-${userId}`;
 
 /**
  * Creator Onboarding Page
@@ -86,10 +87,14 @@ export default function BecomeCreatorPage() {
   /**
    * Load draft from localStorage on mount (before API check)
    * This ensures progress is restored even if user refreshes
+   * Uses user-specific key to prevent state bleeding between users
    */
   useEffect(() => {
+    if (!user?.id) return; // Wait for user to be loaded
+
     try {
-      const saved = localStorage.getItem(STORAGE_KEY);
+      const storageKey = getStorageKey(user.id);
+      const saved = localStorage.getItem(storageKey);
       if (saved) {
         const parsed = JSON.parse(saved);
         if (parsed.state) {
@@ -103,20 +108,22 @@ export default function BecomeCreatorPage() {
       // Ignore parse errors, start fresh
     }
     setHasLoadedFromStorage(true);
-  }, []);
+  }, [user?.id]);
 
   /**
    * Save draft to localStorage on state/step change
    * Only save after initial load to avoid overwriting with initial state
+   * Uses user-specific key to prevent state bleeding between users
    */
   useEffect(() => {
-    if (hasLoadedFromStorage) {
+    if (hasLoadedFromStorage && user?.id) {
+      const storageKey = getStorageKey(user.id);
       localStorage.setItem(
-        STORAGE_KEY,
+        storageKey,
         JSON.stringify({ state, step: currentStep }),
       );
     }
-  }, [state, currentStep, hasLoadedFromStorage]);
+  }, [state, currentStep, hasLoadedFromStorage, user?.id]);
 
   /**
    * Check if user already has a creator profile
@@ -267,7 +274,9 @@ export default function BecomeCreatorPage() {
     }
 
     // Clear localStorage draft after successful activation
-    localStorage.removeItem(STORAGE_KEY);
+    if (user?.id) {
+      localStorage.removeItem(getStorageKey(user.id));
+    }
 
     // Redirect to creator dashboard or Stripe setup
     // For now, redirect to a success page (will be creator dashboard later)

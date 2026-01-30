@@ -14,7 +14,6 @@
  * - Rate limit: 30 messages/hour
  */
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import {
   messageListQuerySchema,
@@ -25,6 +24,7 @@ import { messageRateLimiter } from "@/lib/rate-limit";
 import { sanitizeHtml } from "@/lib/sanitize";
 import { sendNewMessageEmail } from "@/lib/email";
 import { notifyNewMessage } from "@/lib/notifications";
+import { ensureUser } from "@/lib/ensure-user";
 import type { Prisma } from "@prisma/client";
 
 /**
@@ -34,27 +34,15 @@ import type { Prisma } from "@prisma/client";
  */
 export async function GET(request: NextRequest) {
   try {
-    // Verify authentication
-    const { userId: clerkId } = await auth();
-    if (!clerkId) {
+    // Verify authentication and ensure user exists in database
+    const userResult = await ensureUser();
+    if (!userResult) {
       return NextResponse.json(
         { error: "Unauthorized", code: "UNAUTHORIZED" },
         { status: 401 },
       );
     }
-
-    // Get user
-    const user = await prisma.user.findUnique({
-      where: { clerkId },
-      select: { id: true },
-    });
-
-    if (!user) {
-      return NextResponse.json(
-        { error: "User not found", code: "USER_NOT_FOUND" },
-        { status: 404 },
-      );
-    }
+    const user = userResult.user;
 
     // Parse query parameters
     const searchParams = request.nextUrl.searchParams;
@@ -167,18 +155,18 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    // Verify authentication
-    const { userId: clerkId } = await auth();
-    if (!clerkId) {
+    // Verify authentication and ensure user exists
+    const userResult = await ensureUser();
+    if (!userResult) {
       return NextResponse.json(
         { error: "Unauthorized", code: "UNAUTHORIZED" },
         { status: 401 },
       );
     }
 
-    // Get sender user with their creator profile (if any)
+    // Get sender with their creator profile (if any)
     const sender = await prisma.user.findUnique({
-      where: { clerkId },
+      where: { id: userResult.user.id },
       include: {
         creatorProfile: {
           select: {
@@ -442,27 +430,15 @@ export async function POST(request: NextRequest) {
  */
 export async function PATCH(request: NextRequest) {
   try {
-    // Verify authentication
-    const { userId: clerkId } = await auth();
-    if (!clerkId) {
+    // Verify authentication and ensure user exists
+    const userResult = await ensureUser();
+    if (!userResult) {
       return NextResponse.json(
         { error: "Unauthorized", code: "UNAUTHORIZED" },
         { status: 401 },
       );
     }
-
-    // Get user
-    const user = await prisma.user.findUnique({
-      where: { clerkId },
-      select: { id: true },
-    });
-
-    if (!user) {
-      return NextResponse.json(
-        { error: "User not found", code: "USER_NOT_FOUND" },
-        { status: 404 },
-      );
-    }
+    const user = userResult.user;
 
     // Parse request body
     const body = await request.json();

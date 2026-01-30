@@ -2,11 +2,29 @@
  * Prisma Seed Script for breathwithmagic
  *
  * Creates sample creators and content for development and testing.
- * Run with: npx prisma db seed
+ * Run with: npm run db:seed
  */
 import { PrismaClient, CreatorCategory, ContentType } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { Pool } from "pg";
+import * as dotenv from "dotenv";
 
-const prisma = new PrismaClient();
+// Load environment variables
+dotenv.config({ path: ".env.local" });
+dotenv.config({ path: ".env" });
+
+// Create a PostgreSQL connection pool (same pattern as lib/prisma.ts)
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  max: 5,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 10000,
+});
+
+// Create the Prisma PostgreSQL adapter
+const adapter = new PrismaPg(pool);
+
+const prisma = new PrismaClient({ adapter });
 
 async function main() {
   console.log("Seeding database...");
@@ -60,7 +78,7 @@ async function main() {
   // Create creator profiles
   const sarahProfile = await prisma.creatorProfile.upsert({
     where: { userId: sarah.id },
-    update: {},
+    update: { stripeOnboardingComplete: true },
     create: {
       userId: sarah.id,
       handle: "sarahbreath",
@@ -71,12 +89,13 @@ async function main() {
       status: "active",
       isVerified: true,
       isFeatured: true,
+      stripeOnboardingComplete: true, // For seed data to show up on explore
     },
   });
 
   const marcusProfile = await prisma.creatorProfile.upsert({
     where: { userId: marcus.id },
-    update: {},
+    update: { stripeOnboardingComplete: true },
     create: {
       userId: marcus.id,
       handle: "marcusyoga",
@@ -86,12 +105,13 @@ async function main() {
       subscriptionPrice: "TIER_2000",
       status: "active",
       isFeatured: true,
+      stripeOnboardingComplete: true, // For seed data to show up on explore
     },
   });
 
   const lunaProfile = await prisma.creatorProfile.upsert({
     where: { userId: luna.id },
-    update: {},
+    update: { stripeOnboardingComplete: true },
     create: {
       userId: luna.id,
       handle: "lunasounds",
@@ -100,6 +120,7 @@ async function main() {
       category: CreatorCategory.SoundHealing,
       subscriptionPrice: "TIER_1000",
       status: "active",
+      stripeOnboardingComplete: true, // For seed data to show up on explore
     },
   });
 
@@ -261,4 +282,5 @@ main()
   })
   .finally(async () => {
     await prisma.$disconnect();
+    await pool.end();
   });

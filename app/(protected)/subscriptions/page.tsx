@@ -1,9 +1,9 @@
 import { Metadata } from "next";
-import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 
 import { prisma } from "@/lib/prisma";
+import { ensureUser } from "@/lib/ensure-user";
 import { Button } from "@/components/ui/button";
 import { SubscriptionsClient } from "./subscriptions-client";
 import { BillingPortalButton } from "./billing-portal-button";
@@ -20,24 +20,12 @@ export const metadata: Metadata = {
  * Delegates to client component for interactivity.
  */
 export default async function SubscriptionsPage() {
-  const user = await currentUser();
-
-  if (!user) {
+  // Ensure user exists in database (auto-creates if not)
+  const userResult = await ensureUser();
+  if (!userResult) {
     redirect("/sign-in?redirect_url=/subscriptions");
   }
-
-  // Get the user from our database
-  const dbUser = await prisma.user.findUnique({
-    where: { clerkId: user.id },
-    select: {
-      id: true,
-      stripeCustomerId: true,
-    },
-  });
-
-  if (!dbUser) {
-    redirect("/sign-in");
-  }
+  const dbUser = userResult.user;
 
   // Fetch initial subscriptions
   const subscriptions = await prisma.subscription.findMany({

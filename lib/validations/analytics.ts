@@ -63,7 +63,19 @@ export const creatorSettingsUpdateSchema = z.object({
     ])
     .optional(),
   subscriptionPrice: z
-    .enum(["TIER_500", "TIER_1000", "TIER_2000", "TIER_3000"])
+    .enum([
+      "TIER_FREE",
+      "TIER_500",
+      "TIER_1000",
+      "TIER_1500",
+      "TIER_2000",
+      "TIER_2500",
+      "TIER_3000",
+      "TIER_4000",
+      "TIER_5000",
+      "TIER_7500",
+      "TIER_9900",
+    ])
     .optional(),
   trialEnabled: z.boolean().optional(),
   dmEnabled: z.boolean().optional(),
@@ -150,10 +162,17 @@ export function getPeriodStartDate(period: AnalyticsPeriod): Date | null {
  */
 export function formatPriceTier(tier: string): string {
   const amounts: Record<string, string> = {
+    TIER_FREE: "Free",
     TIER_500: "$5",
     TIER_1000: "$10",
+    TIER_1500: "$15",
     TIER_2000: "$20",
+    TIER_2500: "$25",
     TIER_3000: "$30",
+    TIER_4000: "$40",
+    TIER_5000: "$50",
+    TIER_7500: "$75",
+    TIER_9900: "$99",
   };
   return amounts[tier] || tier;
 }

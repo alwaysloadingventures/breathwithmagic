@@ -162,10 +162,17 @@ export function isOnboardingComplete(account: Stripe.Account): boolean {
  * Matches Prisma SubscriptionPriceTier enum
  */
 export const PRICE_TIER_TO_CENTS: Record<string, number> = {
+  TIER_FREE: 0, // $0/month (free tier)
   TIER_500: 500, // $5/month
   TIER_1000: 1000, // $10/month
+  TIER_1500: 1500, // $15/month
   TIER_2000: 2000, // $20/month
+  TIER_2500: 2500, // $25/month
   TIER_3000: 3000, // $30/month
+  TIER_4000: 4000, // $40/month
+  TIER_5000: 5000, // $50/month
+  TIER_7500: 7500, // $75/month
+  TIER_9900: 9900, // $99/month
 };
 
 /**

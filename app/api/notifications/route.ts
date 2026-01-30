@@ -9,7 +9,6 @@
  * - Rate limit: 30 requests/minute
  */
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { searchRateLimiter } from "@/lib/rate-limit";
 import {
@@ -17,6 +16,7 @@ import {
   setCachedNotificationCount,
 } from "@/lib/cache";
 import { notificationListQuerySchema } from "@/lib/validations/notification";
+import { ensureUser } from "@/lib/ensure-user";
 
 /**
  * GET /api/notifications
@@ -25,27 +25,15 @@ import { notificationListQuerySchema } from "@/lib/validations/notification";
  */
 export async function GET(request: NextRequest) {
   try {
-    // Verify authentication
-    const { userId: clerkId } = await auth();
-    if (!clerkId) {
+    // Verify authentication and ensure user exists
+    const userResult = await ensureUser();
+    if (!userResult) {
       return NextResponse.json(
         { error: "Unauthorized", code: "UNAUTHORIZED" },
         { status: 401 },
       );
     }
-
-    // Get user
-    const user = await prisma.user.findUnique({
-      where: { clerkId },
-      select: { id: true },
-    });
-
-    if (!user) {
-      return NextResponse.json(
-        { error: "User not found", code: "USER_NOT_FOUND" },
-        { status: 404 },
-      );
-    }
+    const user = userResult.user;
 
     // Check rate limit (30 requests/minute)
     const rateLimitResult = await searchRateLimiter.checkAsync(

@@ -38,10 +38,17 @@ const categories: CreatorCategory[] = [
 ];
 
 const priceTiers: SubscriptionPriceTier[] = [
+  "TIER_FREE",
   "TIER_500",
   "TIER_1000",
+  "TIER_1500",
   "TIER_2000",
+  "TIER_2500",
   "TIER_3000",
+  "TIER_4000",
+  "TIER_5000",
+  "TIER_7500",
+  "TIER_9900",
 ];
 
 /**
@@ -110,7 +117,7 @@ export function StepCategoryPricing({
       {/* Price Selection */}
       <div className="space-y-4">
         <Label className="text-base">Monthly Subscription Price</Label>
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-11 gap-2">
           {priceTiers.map((tier) => {
             const amount = priceTierToAmount[tier];
             const isSelected = subscriptionPrice === tier;
@@ -121,7 +128,7 @@ export function StepCategoryPricing({
                 type="button"
                 onClick={() => onPriceChange(tier)}
                 className={cn(
-                  "flex h-16 flex-col items-center justify-center rounded-xl border transition-all",
+                  "flex h-14 flex-col items-center justify-center rounded-lg border transition-all",
                   "focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
                   "hover:border-primary/50 hover:bg-accent/30",
                   isSelected
@@ -130,8 +137,12 @@ export function StepCategoryPricing({
                 )}
                 aria-pressed={isSelected}
               >
-                <span className="text-lg font-semibold">${amount}</span>
-                <span className="text-xs text-muted-foreground">/month</span>
+                <span className="text-base font-semibold">
+                  {amount === 0 ? "Free" : `$${amount}`}
+                </span>
+                {amount > 0 && (
+                  <span className="text-[10px] text-muted-foreground">/mo</span>
+                )}
               </button>
             );
           })}

@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { CreatorCardSkeleton } from "@/components/browse";
 import { ExplorePageClient } from "./explore-page-client";
 import { SkipLink } from "@/components/ui/skip-link";
+import { SmartHeader } from "@/components/layout";
 
 /**
  * Explore Page - Browse creators with filters
@@ -44,6 +45,7 @@ export default async function ExplorePage({ searchParams }: ExplorePageProps) {
   return (
     <>
       <SkipLink />
+      <SmartHeader />
       <main id="main-content" className="min-h-screen bg-background">
         <div className="container mx-auto px-4 py-8 md:py-12">
           {/* Page Header */}

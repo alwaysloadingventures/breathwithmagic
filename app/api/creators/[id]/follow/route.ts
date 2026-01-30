@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
 
 import { prisma } from "@/lib/prisma";
+import { ensureUser } from "@/lib/ensure-user";
 
 /**
  * Follow API Routes
@@ -21,9 +21,9 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const { userId } = await auth();
-
-    if (!userId) {
+    // Verify authentication and ensure user exists
+    const userResult = await ensureUser();
+    if (!userResult) {
       return NextResponse.json(
         {
           error: "Please sign in to check follow status",
@@ -32,21 +32,9 @@ export async function GET(
         { status: 401 },
       );
     }
+    const user = userResult.user;
 
     const { id } = await params;
-
-    // Find the user in database
-    const user = await prisma.user.findUnique({
-      where: { clerkId: userId },
-      select: { id: true },
-    });
-
-    if (!user) {
-      return NextResponse.json(
-        { error: "User not found", code: "USER_NOT_FOUND" },
-        { status: 404 },
-      );
-    }
 
     // Find the creator
     const creator = await prisma.creatorProfile.findFirst({
@@ -95,29 +83,17 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const { userId } = await auth();
-
-    if (!userId) {
+    // Verify authentication and ensure user exists
+    const userResult = await ensureUser();
+    if (!userResult) {
       return NextResponse.json(
         { error: "Please sign in to follow creators", code: "UNAUTHORIZED" },
         { status: 401 },
       );
     }
+    const user = userResult.user;
 
     const { id } = await params;
-
-    // Find the user in database
-    const user = await prisma.user.findUnique({
-      where: { clerkId: userId },
-      select: { id: true },
-    });
-
-    if (!user) {
-      return NextResponse.json(
-        { error: "User not found", code: "USER_NOT_FOUND" },
-        { status: 404 },
-      );
-    }
 
     // Find the creator
     const creator = await prisma.creatorProfile.findFirst({
@@ -186,29 +162,17 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const { userId } = await auth();
-
-    if (!userId) {
+    // Verify authentication and ensure user exists
+    const userResult = await ensureUser();
+    if (!userResult) {
       return NextResponse.json(
         { error: "Please sign in to unfollow creators", code: "UNAUTHORIZED" },
         { status: 401 },
       );
     }
+    const user = userResult.user;
 
     const { id } = await params;
-
-    // Find the user in database
-    const user = await prisma.user.findUnique({
-      where: { clerkId: userId },
-      select: { id: true },
-    });
-
-    if (!user) {
-      return NextResponse.json(
-        { error: "User not found", code: "USER_NOT_FOUND" },
-        { status: 404 },
-      );
-    }
 
     // Find the creator
     const creator = await prisma.creatorProfile.findFirst({

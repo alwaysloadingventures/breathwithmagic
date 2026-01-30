@@ -3,11 +3,11 @@
  *
  * Index page for user settings, providing navigation to various settings sections.
  */
-import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Mail, ChevronRight } from "lucide-react";
 import { Card, CardContent, CardDescription, CardTitle } from "@/components/ui/card";
+import { ensureUser } from "@/lib/ensure-user";
 
 /**
  * Settings navigation items
@@ -41,9 +41,9 @@ const SETTINGS_ITEMS = [
 ];
 
 export default async function SettingsPage() {
-  const { userId: clerkId } = await auth();
-
-  if (!clerkId) {
+  // Ensure user exists in database (auto-creates if not)
+  const userResult = await ensureUser();
+  if (!userResult) {
     redirect("/sign-in");
   }
 
