@@ -1,8 +1,9 @@
 /**
- * POST /api/creators/[id]/subscribe
+ * GET/POST /api/creators/[id]/subscribe
  *
  * Create a Stripe Checkout session for subscribing to a creator.
- * Returns a URL to redirect the user to for payment.
+ * - GET: Creates session and redirects directly to Stripe Checkout
+ * - POST: Creates session and returns checkout URL in JSON
  *
  * Requirements:
  * - User must be authenticated
@@ -15,10 +16,9 @@
  * 3. Get or create Stripe customer for user
  * 4. Get or create price for creator's tier
  * 5. Create checkout session with platform fee
- * 6. Return checkout URL
+ * 6. Return checkout URL or redirect
  */
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
 import Stripe from "stripe";
 import { prisma } from "@/lib/prisma";
 import {
@@ -27,6 +27,7 @@ import {
   getOrCreateCustomer,
   getOrCreatePrice,
   createSubscriptionCheckout,
+  isOnboardingComplete,
   PRICE_TIER_TO_CENTS,
 } from "@/lib/stripe";
 import { subscriptionRateLimiter } from "@/lib/rate-limit";
@@ -36,39 +37,53 @@ interface RouteContext {
   params: Promise<{ id: string }>;
 }
 
-export async function POST(
-  request: NextRequest,
-  context: RouteContext,
+/**
+ * Shared logic for creating a subscription checkout session
+ * Returns either a redirect response (for GET) or JSON response (for POST)
+ */
+async function handleSubscribe(
+  creatorId: string,
+  returnJson: boolean,
 ): Promise<NextResponse> {
   try {
-    // Get creator ID from route params
-    const { id: creatorId } = await context.params;
-
     // Verify authentication and ensure user exists
     const userResult = await ensureUser();
     if (!userResult) {
-      return NextResponse.json(
-        { error: "Please sign in to subscribe", code: "UNAUTHORIZED" },
-        { status: 401 },
-      );
+      if (returnJson) {
+        return NextResponse.json(
+          { error: "Please sign in to subscribe", code: "UNAUTHORIZED" },
+          { status: 401 },
+        );
+      }
+      // For GET requests, redirect to sign-in
+      const baseUrl = getBaseUrl();
+      return NextResponse.redirect(`${baseUrl}/sign-in`);
     }
 
     // Rate limit check (use clerkId for rate limiting)
-    const { userId: clerkId } = await auth();
-    const rateLimitResult = subscriptionRateLimiter.check(clerkId || userResult.user.clerkId);
+    const rateLimitResult = subscriptionRateLimiter.check(
+      userResult.user.clerkId,
+    );
     if (!rateLimitResult.allowed) {
-      return NextResponse.json(
-        {
-          error: "Too many subscription attempts. Please try again later.",
-          code: "RATE_LIMITED",
-          retryAfter: rateLimitResult.retryAfterSeconds,
-        },
-        {
-          status: 429,
-          headers: {
-            "Retry-After": String(rateLimitResult.retryAfterSeconds),
+      if (returnJson) {
+        return NextResponse.json(
+          {
+            error: "Too many subscription attempts. Please try again later.",
+            code: "RATE_LIMITED",
+            retryAfter: rateLimitResult.retryAfterSeconds,
           },
-        },
+          {
+            status: 429,
+            headers: {
+              "Retry-After": String(rateLimitResult.retryAfterSeconds),
+            },
+          },
+        );
+      }
+      // For GET, redirect back with error
+      const baseUrl = getBaseUrl();
+      return NextResponse.redirect(
+        `${baseUrl}?error=rate_limited&retry_after=${rateLimitResult.retryAfterSeconds}`,
       );
     }
 
@@ -83,10 +98,14 @@ export async function POST(
     });
 
     if (!user) {
-      return NextResponse.json(
-        { error: "User account not found", code: "USER_NOT_FOUND" },
-        { status: 404 },
-      );
+      if (returnJson) {
+        return NextResponse.json(
+          { error: "User account not found", code: "USER_NOT_FOUND" },
+          { status: 404 },
+        );
+      }
+      const baseUrl = getBaseUrl();
+      return NextResponse.redirect(`${baseUrl}?error=user_not_found`);
     }
 
     // Get the creator profile
@@ -106,71 +125,110 @@ export async function POST(
     });
 
     if (!creator) {
-      return NextResponse.json(
-        { error: "Creator not found", code: "CREATOR_NOT_FOUND" },
-        { status: 404 },
-      );
+      if (returnJson) {
+        return NextResponse.json(
+          { error: "Creator not found", code: "CREATOR_NOT_FOUND" },
+          { status: 404 },
+        );
+      }
+      const baseUrl = getBaseUrl();
+      return NextResponse.redirect(`${baseUrl}?error=creator_not_found`);
     }
 
     // Prevent subscribing to yourself
     if (creator.userId === user.id) {
-      return NextResponse.json(
-        {
-          error: "You cannot subscribe to yourself",
-          code: "SELF_SUBSCRIPTION",
-        },
-        { status: 400 },
+      if (returnJson) {
+        return NextResponse.json(
+          {
+            error: "You cannot subscribe to yourself",
+            code: "SELF_SUBSCRIPTION",
+          },
+          { status: 400 },
+        );
+      }
+      const baseUrl = getBaseUrl();
+      return NextResponse.redirect(
+        `${baseUrl}/${creator.handle}?error=self_subscription`,
       );
     }
 
     // Check creator is ready for subscriptions
     if (!creator.stripeOnboardingComplete || !creator.stripeAccountId) {
-      return NextResponse.json(
-        {
-          error:
-            "This creator is not yet accepting subscriptions. Please check back later.",
-          code: "CREATOR_NOT_READY",
-        },
-        { status: 400 },
-      );
-    }
-
-    // Real-time validation of Stripe account capabilities
-    // This catches cases where the account was disabled after onboarding
-    try {
-      const account = await stripe.accounts.retrieve(creator.stripeAccountId);
-
-      if (!account.charges_enabled) {
-        console.error(
-          `Creator ${creator.id} account ${creator.stripeAccountId} cannot accept charges`,
-        );
+      if (returnJson) {
         return NextResponse.json(
           {
             error:
-              "This creator is currently unable to accept new subscriptions. Please try again later.",
-            code: "CREATOR_ACCOUNT_RESTRICTED",
+              "This creator is not yet accepting subscriptions. Please check back later.",
+            code: "CREATOR_NOT_READY",
           },
           { status: 400 },
         );
       }
+      const baseUrl = getBaseUrl();
+      return NextResponse.redirect(
+        `${baseUrl}/${creator.handle}?error=creator_not_ready`,
+      );
+    }
+
+    // Real-time validation of Stripe account capabilities
+    try {
+      const account = await stripe.accounts.retrieve(creator.stripeAccountId);
+
+      if (!isOnboardingComplete(account)) {
+        console.error(
+          `Creator ${creator.id} account ${creator.stripeAccountId} has not completed onboarding`,
+          {
+            charges_enabled: account.charges_enabled,
+            payouts_enabled: account.payouts_enabled,
+            details_submitted: account.details_submitted,
+          },
+        );
+        if (returnJson) {
+          return NextResponse.json(
+            {
+              error:
+                "This creator is currently unable to accept new subscriptions. Please try again later.",
+              code: "CREATOR_ACCOUNT_RESTRICTED",
+            },
+            { status: 400 },
+          );
+        }
+        const baseUrl = getBaseUrl();
+        return NextResponse.redirect(
+          `${baseUrl}/${creator.handle}?error=creator_restricted`,
+        );
+      }
     } catch (stripeError) {
       console.error(`Failed to verify creator Stripe account:`, stripeError);
-      return NextResponse.json(
-        {
-          error: "Unable to verify creator payment account. Please try again.",
-          code: "ACCOUNT_VERIFICATION_FAILED",
-        },
-        { status: 502 },
+      if (returnJson) {
+        return NextResponse.json(
+          {
+            error:
+              "Unable to verify creator payment account. Please try again.",
+            code: "ACCOUNT_VERIFICATION_FAILED",
+          },
+          { status: 502 },
+        );
+      }
+      const baseUrl = getBaseUrl();
+      return NextResponse.redirect(
+        `${baseUrl}/${creator.handle}?error=verification_failed`,
       );
     }
 
     if (creator.status !== "active") {
-      return NextResponse.json(
-        {
-          error: "This creator is not currently accepting new subscriptions",
-          code: "CREATOR_INACTIVE",
-        },
-        { status: 400 },
+      if (returnJson) {
+        return NextResponse.json(
+          {
+            error: "This creator is not currently accepting new subscriptions",
+            code: "CREATOR_INACTIVE",
+          },
+          { status: 400 },
+        );
+      }
+      const baseUrl = getBaseUrl();
+      return NextResponse.redirect(
+        `${baseUrl}/${creator.handle}?error=creator_inactive`,
       );
     }
 
@@ -194,23 +252,34 @@ export async function POST(
         existingSubscription.status === "active" ||
         existingSubscription.status === "trialing"
       ) {
-        // If they're already subscribed but canceling, let them know
         if (existingSubscription.cancelAtPeriodEnd) {
+          if (returnJson) {
+            return NextResponse.json(
+              {
+                error:
+                  "You have an active subscription that will end at the current period. You can reactivate it from your subscription settings.",
+                code: "SUBSCRIPTION_CANCELING",
+              },
+              { status: 400 },
+            );
+          }
+          const baseUrl = getBaseUrl();
+          return NextResponse.redirect(
+            `${baseUrl}/${creator.handle}?error=subscription_canceling`,
+          );
+        }
+        if (returnJson) {
           return NextResponse.json(
             {
-              error:
-                "You have an active subscription that will end at the current period. You can reactivate it from your subscription settings.",
-              code: "SUBSCRIPTION_CANCELING",
+              error: "You are already subscribed to this creator",
+              code: "ALREADY_SUBSCRIBED",
             },
             { status: 400 },
           );
         }
-        return NextResponse.json(
-          {
-            error: "You are already subscribed to this creator",
-            code: "ALREADY_SUBSCRIBED",
-          },
-          { status: 400 },
+        const baseUrl = getBaseUrl();
+        return NextResponse.redirect(
+          `${baseUrl}/${creator.handle}?error=already_subscribed`,
         );
       }
     }
@@ -231,7 +300,6 @@ export async function POST(
     }
 
     // Get or create price for this tier on the platform account
-    // Note: Prices are created on the platform, funds are routed via transfer_data
     const priceId = await getOrCreatePrice(creator.subscriptionPrice);
 
     // Build URLs for success/cancel
@@ -255,16 +323,26 @@ export async function POST(
       console.error("Stripe checkout session created without URL", {
         sessionId: session.id,
       });
-      return NextResponse.json(
-        {
-          error: "Failed to create checkout session. Please try again.",
-          code: "CHECKOUT_FAILED",
-        },
-        { status: 500 },
+      if (returnJson) {
+        return NextResponse.json(
+          {
+            error: "Failed to create checkout session. Please try again.",
+            code: "CHECKOUT_FAILED",
+          },
+          { status: 500 },
+        );
+      }
+      return NextResponse.redirect(
+        `${baseUrl}/${creator.handle}?error=checkout_failed`,
       );
     }
 
-    // Return the checkout URL
+    // For GET requests, redirect directly to Stripe Checkout
+    if (!returnJson) {
+      return NextResponse.redirect(session.url);
+    }
+
+    // For POST requests, return the checkout URL as JSON
     const priceInDollars = PRICE_TIER_TO_CENTS[creator.subscriptionPrice] / 100;
     return NextResponse.json({
       url: session.url,
@@ -281,62 +359,110 @@ export async function POST(
   } catch (error) {
     console.error("Error creating subscription checkout:", error);
 
+    const baseUrl = getBaseUrl();
+
     // Handle specific Stripe error types
     if (error instanceof Stripe.errors.StripeInvalidRequestError) {
       if (error.code === "resource_missing") {
+        if (returnJson) {
+          return NextResponse.json(
+            {
+              error: "Payment account not found. Please contact support.",
+              code: "RESOURCE_NOT_FOUND",
+            },
+            { status: 400 },
+          );
+        }
+        return NextResponse.redirect(`${baseUrl}?error=resource_not_found`);
+      }
+      if (returnJson) {
         return NextResponse.json(
           {
-            error: "Payment account not found. Please contact support.",
-            code: "RESOURCE_NOT_FOUND",
+            error: "Invalid payment request. Please try again.",
+            code: "INVALID_REQUEST",
           },
           { status: 400 },
         );
       }
-      return NextResponse.json(
-        {
-          error: "Invalid payment request. Please try again.",
-          code: "INVALID_REQUEST",
-        },
-        { status: 400 },
-      );
+      return NextResponse.redirect(`${baseUrl}?error=invalid_request`);
     }
 
     if (error instanceof Stripe.errors.StripeRateLimitError) {
-      return NextResponse.json(
-        {
-          error: "Service temporarily busy. Please try again.",
-          code: "RATE_LIMIT",
-        },
-        { status: 429 },
-      );
+      if (returnJson) {
+        return NextResponse.json(
+          {
+            error: "Service temporarily busy. Please try again.",
+            code: "RATE_LIMIT",
+          },
+          { status: 429 },
+        );
+      }
+      return NextResponse.redirect(`${baseUrl}?error=stripe_rate_limited`);
     }
 
     if (error instanceof Stripe.errors.StripeCardError) {
-      return NextResponse.json(
-        {
-          error: error.message,
-          code: "CARD_ERROR",
-        },
-        { status: 400 },
-      );
+      if (returnJson) {
+        return NextResponse.json(
+          {
+            error: error.message,
+            code: "CARD_ERROR",
+          },
+          { status: 400 },
+        );
+      }
+      return NextResponse.redirect(`${baseUrl}?error=card_error`);
     }
 
     if (error instanceof Stripe.errors.StripeAPIError) {
-      return NextResponse.json(
-        {
-          error: "Payment service error. Please try again later.",
-          code: "STRIPE_API_ERROR",
-        },
-        { status: 502 },
-      );
+      if (returnJson) {
+        return NextResponse.json(
+          {
+            error: "Payment service error. Please try again later.",
+            code: "STRIPE_API_ERROR",
+          },
+          { status: 502 },
+        );
+      }
+      return NextResponse.redirect(`${baseUrl}?error=stripe_api_error`);
     }
 
-    return NextResponse.json(
-      {
-        error: "Unable to start subscription. Please try again later.",
-        code: "SERVER_ERROR",
-      },
-      { status: 500 },
-    );
+    if (returnJson) {
+      return NextResponse.json(
+        {
+          error: "Unable to start subscription. Please try again later.",
+          code: "SERVER_ERROR",
+        },
+        { status: 500 },
+      );
+    }
+    return NextResponse.redirect(`${baseUrl}?error=server_error`);
   }
+}
+
+/**
+ * GET /api/creators/[id]/subscribe
+ *
+ * Creates a Stripe Checkout session and redirects the user directly to it.
+ * This allows the subscribe button to work as a simple link/navigation.
+ */
+export async function GET(
+  _request: NextRequest,
+  context: RouteContext,
+): Promise<NextResponse> {
+  const { id: creatorId } = await context.params;
+  return handleSubscribe(creatorId, false);
+}
+
+/**
+ * POST /api/creators/[id]/subscribe
+ *
+ * Creates a Stripe Checkout session and returns the URL as JSON.
+ * Used for programmatic API calls that need the URL response.
+ */
+export async function POST(
+  _request: NextRequest,
+  context: RouteContext,
+): Promise<NextResponse> {
+  const { id: creatorId } = await context.params;
+  return handleSubscribe(creatorId, true);
 }

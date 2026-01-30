@@ -338,7 +338,10 @@ export async function createSubscriptionCheckout(options: {
       transfer_data: {
         destination: options.creatorStripeAccountId,
       },
-      trial_period_days: options.trialPeriodDays,
+      trial_period_days:
+        options.trialPeriodDays && options.trialPeriodDays > 0
+          ? options.trialPeriodDays
+          : undefined,
       metadata: {
         creatorId: options.creatorId,
         userId: options.userId,

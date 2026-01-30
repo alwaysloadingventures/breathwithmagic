@@ -115,6 +115,25 @@ export function Header({ isCreator = false, userName }: HeaderProps) {
                 </Link>
               );
             })}
+
+            {/* Creator Dashboard Link - Only visible for creators */}
+            {isCreator && (
+              <>
+                <div className="mx-1 h-6 w-px bg-border" role="separator" aria-hidden="true" />
+                <Link
+                  href="/creator/dashboard"
+                  className={cn(
+                    buttonVariants({ variant: "ghost", size: "sm" }),
+                    "min-h-[44px] text-primary hover:bg-primary/10",
+                    pathname.startsWith("/creator") && "bg-primary/5"
+                  )}
+                  aria-current={pathname.startsWith("/creator") ? "page" : undefined}
+                >
+                  <LayoutDashboard className="size-4 mr-1" aria-hidden="true" />
+                  Creator Studio
+                </Link>
+              </>
+            )}
           </nav>
 
           {/* Right side: Notifications, Settings, User Menu */}
@@ -212,7 +231,7 @@ export function Header({ isCreator = false, userName }: HeaderProps) {
                     );
                   })}
 
-                  {/* Creator Dashboard Link */}
+                  {/* Creator Studio Link */}
                   {isCreator && (
                     <>
                       <div className="my-3 h-px bg-border" role="separator" />
@@ -220,12 +239,18 @@ export function Header({ isCreator = false, userName }: HeaderProps) {
                         render={
                           <Link
                             href="/creator/dashboard"
-                            className="flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground min-h-[48px]"
+                            className={cn(
+                              "flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium transition-colors min-h-[48px]",
+                              pathname.startsWith("/creator")
+                                ? "bg-primary/10 text-primary"
+                                : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                            )}
+                            aria-current={pathname.startsWith("/creator") ? "page" : undefined}
                           />
                         }
                       >
                         <LayoutDashboard className="size-5" aria-hidden="true" />
-                        Creator Dashboard
+                        Creator Studio
                       </SheetClose>
                     </>
                   )}

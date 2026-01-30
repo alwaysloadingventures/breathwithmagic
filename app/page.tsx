@@ -16,7 +16,7 @@ import {
   CreatorCardSkeleton,
 } from "@/components/browse";
 import { SkipLink } from "@/components/ui/skip-link";
-import { PublicHeader } from "@/components/layout";
+import { PublicHeader, Footer } from "@/components/layout";
 
 /**
  * Homepage - Public landing page
@@ -160,6 +160,9 @@ export default async function HomePage() {
           </div>
         </section>
       </main>
+
+      {/* Footer */}
+      <Footer />
     </>
   );
 }

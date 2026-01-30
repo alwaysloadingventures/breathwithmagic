@@ -283,8 +283,18 @@ export default function BecomeCreatorPage() {
     router.push("/creator/dashboard");
   };
 
-  // Show loading state
-  if (isLoading || !userLoaded) {
+  /**
+   * Redirect unauthenticated users to sign-in page
+   * This runs after userLoaded is true but user is null
+   */
+  useEffect(() => {
+    if (userLoaded && !user) {
+      router.replace("/sign-in?redirect_url=/become-creator");
+    }
+  }, [userLoaded, user, router]);
+
+  // Show loading state while checking auth
+  if (!userLoaded) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center">
         <Loader2 className="size-8 animate-spin text-primary" />
@@ -293,14 +303,22 @@ export default function BecomeCreatorPage() {
     );
   }
 
-  // Show unauthorized if no user
+  // Show redirecting state for unauthenticated users
   if (!user) {
     return (
-      <div className="flex min-h-[60vh] flex-col items-center justify-center text-center">
-        <h1 className="text-2xl font-semibold">Sign in required</h1>
-        <p className="mt-2 text-muted-foreground">
-          Please sign in to become a creator.
-        </p>
+      <div className="flex min-h-[60vh] flex-col items-center justify-center">
+        <Loader2 className="size-8 animate-spin text-primary" />
+        <p className="mt-4 text-muted-foreground">Redirecting to sign in...</p>
+      </div>
+    );
+  }
+
+  // Show loading state while fetching existing profile data
+  if (isLoading) {
+    return (
+      <div className="flex min-h-[60vh] flex-col items-center justify-center">
+        <Loader2 className="size-8 animate-spin text-primary" />
+        <p className="mt-4 text-muted-foreground">Loading...</p>
       </div>
     );
   }

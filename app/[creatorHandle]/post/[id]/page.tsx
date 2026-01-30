@@ -2,7 +2,6 @@ import { Suspense } from "react";
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
 import { auth } from "@clerk/nextjs/server";
 import {
   ArrowLeft,
@@ -21,6 +20,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ContentViewClient } from "./content-view-client";
+import { RelatedContentItem } from "./related-content-item";
 
 /**
  * Individual Content Page
@@ -527,6 +527,8 @@ export default async function ContentPage({ params }: ContentPageProps) {
 
 /**
  * Related Content Section
+ *
+ * Uses RelatedContentItem client component for proper image error handling.
  */
 async function RelatedContentSection({
   contentId,
@@ -562,91 +564,25 @@ async function RelatedContentSection({
     return null;
   }
 
-  const TypeIcons = {
-    video: Play,
-    audio: Music,
-    text: FileText,
-  };
-
   return (
     <div className="rounded-xl border border-border bg-card overflow-hidden">
       <div className="p-4 border-b border-border">
         <h3 className="font-medium text-foreground">More from this creator</h3>
       </div>
       <div className="divide-y divide-border">
-        {relatedContent.map((item) => {
-          const itemHasAccess = item.isFree || isSubscribed;
-          const ItemIcon = TypeIcons[item.type];
-
-          return (
-            <Link
-              key={item.id}
-              href={
-                itemHasAccess
-                  ? `/${creatorHandle}/post/${item.id}`
-                  : `/${creatorHandle}`
-              }
-              className={cn(
-                "flex gap-3 p-3",
-                itemHasAccess && "hover:bg-muted/50 transition-colors",
-              )}
-            >
-              {/* Thumbnail */}
-              <div className="relative w-24 aspect-video rounded-md overflow-hidden bg-muted shrink-0">
-                {item.thumbnailUrl ? (
-                  <>
-                    <Image
-                      src={item.thumbnailUrl}
-                      alt={item.title}
-                      fill
-                      className={cn(
-                        "object-cover",
-                        !itemHasAccess && "blur-sm scale-105",
-                      )}
-                      sizes="96px"
-                    />
-                    {!itemHasAccess && (
-                      <div className="absolute inset-0 bg-background/30 backdrop-blur-[2px] flex items-center justify-center">
-                        <div className="p-1 rounded-full bg-background/80">
-                          <Play className="size-3" />
-                        </div>
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-muted to-accent/30">
-                    <ItemIcon className="size-5 text-muted-foreground/50" />
-                  </div>
-                )}
-                {item.duration && itemHasAccess && (
-                  <span className="absolute bottom-1 right-1 text-[10px] bg-background/90 px-1 rounded">
-                    {formatDuration(item.duration)}
-                  </span>
-                )}
-              </div>
-
-              {/* Info */}
-              <div className="flex-1 min-w-0">
-                <h4 className="text-sm font-medium text-foreground line-clamp-2">
-                  {item.title}
-                </h4>
-                <div className="flex items-center gap-2 mt-1">
-                  <Badge
-                    variant="secondary"
-                    className="text-[10px] px-1.5 py-0"
-                  >
-                    {item.type}
-                  </Badge>
-                  {item.isFree && (
-                    <Badge className="text-[10px] px-1.5 py-0 bg-primary text-primary-foreground">
-                      Free
-                    </Badge>
-                  )}
-                </div>
-              </div>
-            </Link>
-          );
-        })}
+        {relatedContent.map((item) => (
+          <RelatedContentItem
+            key={item.id}
+            id={item.id}
+            title={item.title}
+            type={item.type}
+            thumbnailUrl={item.thumbnailUrl}
+            duration={item.duration}
+            isFree={item.isFree}
+            hasAccess={isSubscribed}
+            creatorHandle={creatorHandle}
+          />
+        ))}
       </div>
     </div>
   );

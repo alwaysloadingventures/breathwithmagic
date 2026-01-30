@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState, useTransition } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { CreatorCategory, SubscriptionPriceTier } from "@prisma/client";
 import { Loader2 } from "lucide-react";
@@ -67,6 +67,19 @@ export function ExplorePageClient({
   >(initialCategory ?? "all");
 
   /**
+   * Sync local state with SSR props when they change
+   * This is necessary because useState only uses initial value on first mount,
+   * but we need to update state when the page re-renders with new SSR data
+   * after filter/search URL changes.
+   */
+  useEffect(() => {
+    setCreators(initialCreators);
+    setNextCursor(initialNextCursor);
+    setSearchQuery(initialSearchQuery ?? "");
+    setSelectedCategory(initialCategory ?? "all");
+  }, [initialCreators, initialNextCursor, initialCategory, initialSearchQuery]);
+
+  /**
    * Update URL with new filters
    */
   const updateFilters = useCallback(
@@ -97,12 +110,12 @@ export function ExplorePageClient({
 
   /**
    * Handle category change
+   * Note: We don't clear creators here - the useEffect will sync state
+   * when new SSR data arrives. This prevents a flash of empty state.
    */
   const handleCategoryChange = useCallback(
     (category: CreatorCategory | "all") => {
       setSelectedCategory(category);
-      setCreators([]);
-      setNextCursor(null);
       updateFilters(category, searchQuery);
     },
     [searchQuery, updateFilters],
@@ -110,12 +123,12 @@ export function ExplorePageClient({
 
   /**
    * Handle search change (debounced from SearchInput)
+   * Note: We don't clear creators here - the useEffect will sync state
+   * when new SSR data arrives. This prevents a flash of empty state.
    */
   const handleSearchChange = useCallback(
     (query: string) => {
       setSearchQuery(query);
-      setCreators([]);
-      setNextCursor(null);
       updateFilters(selectedCategory, query);
     },
     [selectedCategory, updateFilters],

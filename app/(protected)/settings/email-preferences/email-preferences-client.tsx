@@ -1,9 +1,10 @@
 "use client";
 
 /**
- * Email Preferences Client Component
+ * Notification Preferences Client Component
  *
- * Handles the interactive email preferences form with toggle switches.
+ * Handles the interactive notification preferences form with toggle switches.
+ * Currently manages email notifications, with in-app notifications planned.
  * Uses optimistic updates and shows confirmation toast on save.
  */
 
@@ -160,10 +161,10 @@ export function EmailPreferencesClient({
         </Link>
 
         <h1 className="text-foreground text-2xl font-semibold">
-          Email Preferences
+          Notification Preferences
         </h1>
         <p className="text-muted-foreground mt-1">
-          Choose which emails you would like to receive from breathwithmagic.
+          Choose which email and in-app notifications you receive from breathwithmagic.
         </p>
       </div>
 

@@ -43,6 +43,7 @@ interface FeedResponse {
   items: FeedItem[];
   nextCursor: string | null;
   isEmpty: boolean;
+  isPromotional?: boolean;
 }
 
 export function HomeFeed() {
@@ -51,6 +52,7 @@ export function HomeFeed() {
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isEmpty, setIsEmpty] = useState(false);
+  const [isPromotional, setIsPromotional] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
@@ -91,6 +93,7 @@ export function HomeFeed() {
           setItems(data.items);
           setNextCursor(data.nextCursor);
           setIsEmpty(data.isEmpty);
+          setIsPromotional(data.isPromotional ?? false);
         }
       } catch {
         if (mounted) {
@@ -202,6 +205,32 @@ export function HomeFeed() {
 
   return (
     <>
+      {/* Promotional Content Banner */}
+      {isPromotional && items.length > 0 && (
+        <div className="mb-6 p-4 bg-primary/5 border border-primary/20 rounded-lg">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <Compass className="size-5 text-primary" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-medium text-foreground mb-1">
+                Discover amazing creators
+              </h3>
+              <p className="text-sm text-muted-foreground mb-3">
+                Here&apos;s some free content to get you started. Follow creators you love to personalize your feed!
+              </p>
+              <Link
+                href="/explore"
+                className={cn(buttonVariants({ size: "sm" }))}
+              >
+                <Compass className="size-4 mr-2" />
+                Browse all creators
+              </Link>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Feed Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {items.map((item) => (

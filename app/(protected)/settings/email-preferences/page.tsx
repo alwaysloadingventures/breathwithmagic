@@ -1,12 +1,12 @@
 /**
- * Email Preferences Settings Page
+ * Notification Preferences Settings Page
  *
- * Allows users to manage their email notification preferences.
- * Toggle switches for each email type with clear descriptions.
+ * Allows users to manage their email and in-app notification preferences.
+ * Toggle switches for each notification type with clear descriptions.
  *
  * PRD Requirements:
- * - Users can opt-in/opt-out of each email type
- * - Clear descriptions of what each email type means
+ * - Users can opt-in/opt-out of each notification type
+ * - Clear descriptions of what each notification type means
  * - Save button with confirmation
  */
 import { redirect } from "next/navigation";

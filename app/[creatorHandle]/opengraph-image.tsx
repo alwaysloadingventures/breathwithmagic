@@ -12,7 +12,7 @@ import { prisma } from "@/lib/prisma";
  * Uses the warm neutral design system colors from the PRD.
  */
 
-export const runtime = "edge";
+export const runtime = "nodejs";
 
 export const alt = "Creator Profile on breathwithmagic";
 

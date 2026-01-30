@@ -20,6 +20,10 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
+        hostname: "picsum.photos", // Placeholder images for seed data
+      },
+      {
+        protocol: "https",
         hostname: "*.r2.dev", // Cloudflare R2 public buckets
       },
       {

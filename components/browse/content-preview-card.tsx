@@ -1,7 +1,10 @@
+"use client";
+
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ContentType } from "@prisma/client";
-import { Lock, Play, FileText, Music } from "lucide-react";
+import { Lock, Play, FileText, Music, ImageOff, LucideIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,6 +18,24 @@ function formatDuration(seconds: number): string {
   const secs = seconds % 60;
   return `${mins}:${secs.toString().padStart(2, "0")}`;
 }
+
+/**
+ * Type icon mapping - defined outside component to avoid recreation
+ */
+const TYPE_ICONS: Record<ContentType, LucideIcon> = {
+  video: Play,
+  audio: Music,
+  text: FileText,
+};
+
+/**
+ * Type-based gradient mapping for fallbacks
+ */
+const TYPE_GRADIENTS: Record<ContentType, string> = {
+  video: "from-primary/20 via-accent/30 to-muted",
+  audio: "from-accent/30 via-primary/20 to-muted",
+  text: "from-muted via-accent/20 to-primary/10",
+};
 
 export interface ContentPreviewCardProps {
   /** Content ID for linking */
@@ -46,6 +67,7 @@ export interface ContentPreviewCardProps {
  *
  * Used on creator profile pages to display content previews.
  * Shows full content for free posts, blurred thumbnails with lock icon for paid.
+ * Handles image loading errors gracefully with fallback UI.
  */
 export function ContentPreviewCard({
   id,
@@ -60,15 +82,15 @@ export function ContentPreviewCard({
   publishedAt,
   className,
 }: ContentPreviewCardProps) {
+  const [imageError, setImageError] = useState(false);
   const canView = isFree || hasAccess;
   const href = canView ? `/${creatorHandle}/post/${id}` : `/${creatorHandle}`;
 
-  // Type icons
-  const TypeIcon = {
-    video: Play,
-    audio: Music,
-    text: FileText,
-  }[type];
+  // Get icon component from the constant map
+  const TypeIcon = TYPE_ICONS[type];
+
+  // Show fallback when no thumbnail or image failed to load
+  const showFallback = !thumbnailUrl || imageError;
 
   return (
     <Link href={href} className="block group">
@@ -83,7 +105,14 @@ export function ContentPreviewCard({
       >
         {/* Thumbnail / Preview */}
         <div className="relative aspect-video bg-muted overflow-hidden">
-          {thumbnailUrl ? (
+          {showFallback ? (
+            <ThumbnailFallback
+              type={type}
+              canView={canView}
+              title={title}
+              hasError={imageError}
+            />
+          ) : (
             <>
               <Image
                 src={thumbnailUrl}
@@ -95,25 +124,12 @@ export function ContentPreviewCard({
                   !canView && "blur-md scale-110",
                 )}
                 sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                onError={() => setImageError(true)}
               />
               {!canView && (
                 <div className="absolute inset-0 bg-background/40 backdrop-blur-sm" />
               )}
             </>
-          ) : (
-            <div
-              className={cn(
-                "absolute inset-0 flex items-center justify-center",
-                "bg-gradient-to-br from-muted to-accent/50",
-              )}
-            >
-              <TypeIcon
-                className={cn(
-                  "size-12 text-muted-foreground/50",
-                  !canView && "blur-sm",
-                )}
-              />
-            </div>
           )}
 
           {/* Lock Overlay for Paid Content */}
@@ -181,6 +197,67 @@ export function ContentPreviewCard({
         </CardContent>
       </Card>
     </Link>
+  );
+}
+
+/**
+ * ThumbnailFallback - Displayed when no thumbnail URL or image fails to load
+ */
+function ThumbnailFallback({
+  type,
+  canView,
+  title,
+  hasError,
+}: {
+  type: ContentType;
+  canView: boolean;
+  title: string;
+  hasError: boolean;
+}) {
+  const TypeIcon = TYPE_ICONS[type];
+  const gradient = TYPE_GRADIENTS[type];
+
+  return (
+    <div
+      className={cn(
+        "absolute inset-0 flex flex-col items-center justify-center",
+        `bg-gradient-to-br ${gradient}`,
+      )}
+      role="img"
+      aria-label={`${title} - ${type} content`}
+    >
+      {hasError ? (
+        // Show error state when image failed to load
+        <>
+          <div className="p-3 rounded-full bg-background/60 backdrop-blur-sm mb-2">
+            <ImageOff
+              className={cn(
+                "size-8 text-muted-foreground/70",
+                !canView && "blur-sm",
+              )}
+            />
+          </div>
+          <span
+            className={cn(
+              "text-xs text-muted-foreground bg-background/60 backdrop-blur-sm px-2 py-1 rounded",
+              !canView && "blur-sm",
+            )}
+          >
+            Preview unavailable
+          </span>
+        </>
+      ) : (
+        // Show type icon when no thumbnail was provided
+        <div className="p-4 rounded-full bg-background/40 backdrop-blur-sm">
+          <TypeIcon
+            className={cn(
+              "size-10 text-muted-foreground/60",
+              !canView && "blur-sm",
+            )}
+          />
+        </div>
+      )}
+    </div>
   );
 }
 

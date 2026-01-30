@@ -141,10 +141,14 @@ async function main() {
   });
 
   // Create content for Sarah
+  // Use picsum.photos for placeholder thumbnails - consistent wellness-themed images
   await Promise.all([
     prisma.content.upsert({
       where: { id: "seed_content_sarah_1" },
-      update: {},
+      update: {
+        thumbnailUrl: "https://picsum.photos/seed/breath1/800/450",
+        mediaUrl: "https://picsum.photos/seed/breath1/1920/1080", // Placeholder for seed data
+      },
       create: {
         id: "seed_content_sarah_1",
         creatorId: sarahProfile.id,
@@ -153,6 +157,8 @@ async function main() {
         title: "Welcome to Your Breath Journey",
         description:
           "An introduction to the 30 Days to Calm program. Learn the fundamentals.",
+        thumbnailUrl: "https://picsum.photos/seed/breath1/800/450",
+        mediaUrl: "https://picsum.photos/seed/breath1/1920/1080", // Placeholder for seed data
         duration: 600,
         isFree: true,
         status: "published",
@@ -162,7 +168,10 @@ async function main() {
     }),
     prisma.content.upsert({
       where: { id: "seed_content_sarah_2" },
-      update: {},
+      update: {
+        thumbnailUrl: "https://picsum.photos/seed/breath2/800/450",
+        mediaUrl: "https://picsum.photos/seed/breath2/1920/1080",
+      },
       create: {
         id: "seed_content_sarah_2",
         creatorId: sarahProfile.id,
@@ -171,6 +180,8 @@ async function main() {
         title: "Day 1: Finding Your Natural Rhythm",
         description:
           "Discover your breath's natural rhythm and learn the foundation of conscious breathing.",
+        thumbnailUrl: "https://picsum.photos/seed/breath2/800/450",
+        mediaUrl: "https://picsum.photos/seed/breath2/1920/1080",
         duration: 900,
         isFree: false,
         status: "published",
@@ -180,7 +191,10 @@ async function main() {
     }),
     prisma.content.upsert({
       where: { id: "seed_content_sarah_3" },
-      update: {},
+      update: {
+        thumbnailUrl: "https://picsum.photos/seed/breath3/800/450",
+        mediaUrl: "https://picsum.photos/seed/breath3/1920/1080",
+      },
       create: {
         id: "seed_content_sarah_3",
         creatorId: sarahProfile.id,
@@ -188,6 +202,8 @@ async function main() {
         title: "Morning Energizing Breath",
         description:
           "A quick 5-minute practice to start your day with energy and clarity.",
+        thumbnailUrl: "https://picsum.photos/seed/breath3/800/450",
+        mediaUrl: "https://picsum.photos/seed/breath3/1920/1080",
         duration: 300,
         isFree: true,
         status: "published",
@@ -200,7 +216,10 @@ async function main() {
   await Promise.all([
     prisma.content.upsert({
       where: { id: "seed_content_marcus_1" },
-      update: {},
+      update: {
+        thumbnailUrl: "https://picsum.photos/seed/yoga1/800/450",
+        mediaUrl: "https://picsum.photos/seed/yoga1/1920/1080",
+      },
       create: {
         id: "seed_content_marcus_1",
         creatorId: marcusProfile.id,
@@ -208,6 +227,8 @@ async function main() {
         title: "Gentle Morning Flow",
         description:
           "Wake up your body with this gentle 20-minute vinyasa sequence.",
+        thumbnailUrl: "https://picsum.photos/seed/yoga1/800/450",
+        mediaUrl: "https://picsum.photos/seed/yoga1/1920/1080",
         duration: 1200,
         isFree: true,
         status: "published",
@@ -216,7 +237,10 @@ async function main() {
     }),
     prisma.content.upsert({
       where: { id: "seed_content_marcus_2" },
-      update: {},
+      update: {
+        thumbnailUrl: "https://picsum.photos/seed/yoga2/800/450",
+        mediaUrl: "https://picsum.photos/seed/yoga2/1920/1080",
+      },
       create: {
         id: "seed_content_marcus_2",
         creatorId: marcusProfile.id,
@@ -224,6 +248,8 @@ async function main() {
         title: "Power Vinyasa: Full Body Strength",
         description:
           "An intense 45-minute practice for building strength and endurance.",
+        thumbnailUrl: "https://picsum.photos/seed/yoga2/800/450",
+        mediaUrl: "https://picsum.photos/seed/yoga2/1920/1080",
         duration: 2700,
         isFree: false,
         status: "published",
@@ -236,7 +262,10 @@ async function main() {
   await Promise.all([
     prisma.content.upsert({
       where: { id: "seed_content_luna_1" },
-      update: {},
+      update: {
+        thumbnailUrl: "https://picsum.photos/seed/sound1/800/450",
+        mediaUrl: "https://picsum.photos/seed/sound1/1920/1080",
+      },
       create: {
         id: "seed_content_luna_1",
         creatorId: lunaProfile.id,
@@ -244,6 +273,8 @@ async function main() {
         title: "Tibetan Singing Bowls Meditation",
         description:
           "Immerse yourself in the healing vibrations of Tibetan singing bowls.",
+        thumbnailUrl: "https://picsum.photos/seed/sound1/800/450",
+        mediaUrl: "https://picsum.photos/seed/sound1/1920/1080",
         duration: 1800,
         isFree: true,
         status: "published",
@@ -252,7 +283,10 @@ async function main() {
     }),
     prisma.content.upsert({
       where: { id: "seed_content_luna_2" },
-      update: {},
+      update: {
+        thumbnailUrl: "https://picsum.photos/seed/sound2/800/450",
+        mediaUrl: "https://picsum.photos/seed/sound2/1920/1080",
+      },
       create: {
         id: "seed_content_luna_2",
         creatorId: lunaProfile.id,
@@ -260,6 +294,8 @@ async function main() {
         title: "Sleep Sound Bath",
         description:
           "Drift into peaceful sleep with this 30-minute sound healing journey.",
+        thumbnailUrl: "https://picsum.photos/seed/sound2/800/450",
+        mediaUrl: "https://picsum.photos/seed/sound2/1920/1080",
         duration: 1800,
         isFree: false,
         status: "published",

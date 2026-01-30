@@ -118,12 +118,76 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
       });
     }
 
-    // If user has no subscriptions or follows, return empty feed
+    // If user has no subscriptions or follows, show promotional/discovery content
+    // This includes free content from featured creators and recent free content from all creators
     if (whereConditions.length === 0) {
+      // Fetch promotional content: free published content from active creators
+      // Prioritize featured creators, then sort by recency
+      const promotionalContent = await prisma.content.findMany({
+        where: {
+          status: "published",
+          publishedAt: { not: null },
+          isFree: true,
+          creator: {
+            status: "active",
+            stripeOnboardingComplete: true,
+          },
+        },
+        take: limit + 1,
+        ...(cursor
+          ? {
+              cursor: { id: cursor },
+              skip: 1,
+            }
+          : {}),
+        orderBy: [
+          { creator: { isFeatured: "desc" } },
+          { publishedAt: "desc" },
+        ],
+        include: {
+          creator: {
+            select: {
+              id: true,
+              handle: true,
+              displayName: true,
+              avatarUrl: true,
+              category: true,
+              isFeatured: true,
+            },
+          },
+        },
+      });
+
+      const hasMore = promotionalContent.length > limit;
+      const items = hasMore ? promotionalContent.slice(0, limit) : promotionalContent;
+      const nextCursor = hasMore ? items[items.length - 1].id : null;
+
+      const formattedItems = items.map((item) => ({
+        id: item.id,
+        type: item.type,
+        title: item.title,
+        description: item.description,
+        thumbnailUrl: item.thumbnailUrl,
+        duration: item.duration,
+        isFree: item.isFree,
+        hasAccess: true, // All promotional content is free, so user has access
+        publishedAt: item.publishedAt?.toISOString() || null,
+        creator: {
+          id: item.creator.id,
+          handle: item.creator.handle,
+          displayName: item.creator.displayName,
+          avatarUrl: item.creator.avatarUrl,
+          category: item.creator.category,
+        },
+        isPromotional: true, // Flag to indicate this is discovery content
+      }));
+
+      // Only return isEmpty: true if there's truly no content at all
       return NextResponse.json({
-        items: [],
-        nextCursor: null,
-        isEmpty: true,
+        items: formattedItems,
+        nextCursor,
+        isEmpty: formattedItems.length === 0,
+        isPromotional: true, // Indicates this is discovery content, not personalized feed
       });
     }
 

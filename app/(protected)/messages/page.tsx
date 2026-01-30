@@ -6,7 +6,6 @@ import { Mail } from "lucide-react";
 import { prisma } from "@/lib/prisma";
 import { ensureUser } from "@/lib/ensure-user";
 import { Button } from "@/components/ui/button";
-import { SkipLink } from "@/components/ui/skip-link";
 import { MessagesInboxClient } from "./messages-inbox-client";
 
 export const metadata: Metadata = {
@@ -119,72 +118,34 @@ export default async function MessagesPage() {
   }));
 
   return (
-    <>
-      <SkipLink />
-      <div className="min-h-screen bg-background">
-        {/* Header */}
-        <header className="sticky top-0 z-50 border-b border-border bg-card/50 backdrop-blur-sm">
-          <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
-            <div className="flex h-16 items-center justify-between">
-              <div className="flex items-center gap-4">
-                <Link
-                  href="/home"
-                  className="text-muted-foreground transition-colors hover:text-foreground"
-                  aria-label="Back to home"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    className="size-5"
-                    aria-hidden="true"
-                  >
-                    <path d="M19 12H5M12 19l-7-7 7-7" />
-                  </svg>
-                </Link>
-                <h1 className="text-lg font-semibold text-foreground">
-                  Messages
-                </h1>
-                {broadcastUnreadCount + dmUnreadCount > 0 && (
-                  <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-xs font-medium text-primary-foreground">
-                    {broadcastUnreadCount + dmUnreadCount > 99
-                      ? "99+"
-                      : broadcastUnreadCount + dmUnreadCount}
-                  </span>
-                )}
-              </div>
-              <Link href="/subscriptions">
-                <Button variant="outline" size="sm">
-                  My Subscriptions
-                </Button>
-              </Link>
-            </div>
-          </div>
-        </header>
-
-        {/* Main Content */}
-        <main
-          id="main-content"
-          className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8"
-        >
-          {totalBroadcastCount === 0 && conversations.length === 0 ? (
-            <EmptyState />
-          ) : (
-            <MessagesInboxClient
-              initialBroadcasts={formattedBroadcasts}
-              initialHasMoreBroadcasts={hasMoreBroadcasts}
-              initialBroadcastUnreadCount={broadcastUnreadCount}
-              initialConversations={conversations}
-              initialDmUnreadCount={dmUnreadCount}
-            />
+    <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
+      {/* Page Header */}
+      <div className="mb-8 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-semibold text-foreground">Messages</h1>
+          {broadcastUnreadCount + dmUnreadCount > 0 && (
+            <span className="flex h-6 min-w-6 items-center justify-center rounded-full bg-primary px-2 text-xs font-medium text-primary-foreground">
+              {broadcastUnreadCount + dmUnreadCount > 99
+                ? "99+"
+                : broadcastUnreadCount + dmUnreadCount}
+            </span>
           )}
-        </main>
+        </div>
       </div>
-    </>
+
+      {/* Content */}
+      {totalBroadcastCount === 0 && conversations.length === 0 ? (
+        <EmptyState />
+      ) : (
+        <MessagesInboxClient
+          initialBroadcasts={formattedBroadcasts}
+          initialHasMoreBroadcasts={hasMoreBroadcasts}
+          initialBroadcastUnreadCount={broadcastUnreadCount}
+          initialConversations={conversations}
+          initialDmUnreadCount={dmUnreadCount}
+        />
+      )}
+    </div>
   );
 }
 
